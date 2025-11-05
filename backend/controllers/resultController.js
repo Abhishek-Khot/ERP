@@ -76,7 +76,7 @@ exports.createOrUpdateResult = async (req, res) => {
 
     // Process subjects (validates subject existence & calculates per-subject grade)
     const processedSubjects = await processSubjectMarks(subjects, grade, gradingSystem, schoolCode);
-    
+
     // Calculate overall statistics
     const overallStats = calculateOverallStatistics(processedSubjects, gradingSystem);
 
@@ -288,9 +288,9 @@ const calculateGrade = (percentage, gradingSystem) => {
 // Simpler CBSE/ICSE style grading used in some endpoints
 const calculateSimpleGrade = (obtainedMarks, totalMarks) => {
   if (obtainedMarks === null || obtainedMarks === undefined || !totalMarks || totalMarks === 0) return null;
-  
+
   const percentage = (obtainedMarks / totalMarks) * 100;
-  
+
   if (percentage >= 91) return 'A1';
   if (percentage >= 81) return 'A2';
   if (percentage >= 71) return 'B1';
@@ -469,7 +469,7 @@ exports.generateClassPerformanceReport = async (req, res) => {
 const calculateClassStatistics = (results) => {
   const percentages = results.map(r => r.overallResult.percentage || 0);
   const total = percentages.reduce((sum, p) => sum + p, 0);
-  
+
   return {
     averagePercentage: percentages.length > 0 ? Math.round((total / percentages.length) * 100) / 100 : 0,
     highestPercentage: percentages.length > 0 ? Math.max(...percentages) : 0,
@@ -570,8 +570,8 @@ exports.saveResults = async (req, res) => {
     for (const result of results) {
       try {
         const studentId = result.studentId;
-        const obtainedMarks = result.obtainedMarks !== null && result.obtainedMarks !== undefined 
-          ? parseInt(result.obtainedMarks) 
+        const obtainedMarks = result.obtainedMarks !== null && result.obtainedMarks !== undefined
+          ? parseInt(result.obtainedMarks)
           : null;
 
         const existingResult = await resultsCollection.findOne({
@@ -603,8 +603,8 @@ exports.saveResults = async (req, res) => {
 
           const totalMarksValue = parseInt(result.totalMarks || maxMarks);
           const calculatedGrade = calculateSimpleGrade(obtainedMarks, totalMarksValue);
-          const calculatedPercentage = obtainedMarks !== null && totalMarksValue > 0 
-            ? Math.round((obtainedMarks / totalMarksValue) * 100 * 100) / 100 
+          const calculatedPercentage = obtainedMarks !== null && totalMarksValue > 0
+            ? Math.round((obtainedMarks / totalMarksValue) * 100 * 100) / 100
             : null;
 
           if (subjectIndex >= 0) {
@@ -656,8 +656,8 @@ exports.saveResults = async (req, res) => {
           // Create new result document
           const totalMarksValue = parseInt(result.totalMarks || maxMarks);
           const calculatedGrade = calculateSimpleGrade(obtainedMarks, totalMarksValue);
-          const calculatedPercentage = obtainedMarks !== null && totalMarksValue > 0 
-            ? Math.round((obtainedMarks / totalMarksValue) * 100 * 100) / 100 
+          const calculatedPercentage = obtainedMarks !== null && totalMarksValue > 0
+            ? Math.round((obtainedMarks / totalMarksValue) * 100 * 100) / 100
             : null;
 
           const newResult = {
@@ -807,7 +807,7 @@ exports.getResults = async (req, res) => {
             updatedAt: subj.updatedAt || doc.updatedAt
           });
         }
-      } 
+      }
       // Legacy flat structure
       else if (doc.testType && doc.obtainedMarks !== undefined) {
         const matchesSubject = !subject || doc.subject === subject;
@@ -904,8 +904,8 @@ exports.updateResult = async (req, res) => {
     }
 
     const now = new Date();
-    const obtainedMarksValue = obtainedMarks !== null && obtainedMarks !== undefined 
-      ? parseInt(obtainedMarks) 
+    const obtainedMarksValue = obtainedMarks !== null && obtainedMarks !== undefined
+      ? parseInt(obtainedMarks)
       : null;
 
     const subjectIndex = existingResult.subjects?.findIndex(
@@ -931,8 +931,8 @@ exports.updateResult = async (req, res) => {
         obtainedMarks: obtainedMarksValue,
         totalMarks: resolvedTotalMarks,
         grade: req.body.grade || updatedSubjects[subjectIndex].grade || null,
-        percentage: obtainedMarksValue !== null && resolvedTotalMarks > 0 
-          ? Math.round((obtainedMarksValue / resolvedTotalMarks) * 100 * 100) / 100 
+        percentage: obtainedMarksValue !== null && resolvedTotalMarks > 0
+          ? Math.round((obtainedMarksValue / resolvedTotalMarks) * 100 * 100) / 100
           : null,
         updatedAt: now
       };
@@ -944,8 +944,8 @@ exports.updateResult = async (req, res) => {
         obtainedMarks: obtainedMarksValue,
         totalMarks: resolvedTotalMarks,
         grade: req.body.grade || null,
-        percentage: obtainedMarksValue !== null && resolvedTotalMarks > 0 
-          ? Math.round((obtainedMarksValue / resolvedTotalMarks) * 100 * 100) / 100 
+        percentage: obtainedMarksValue !== null && resolvedTotalMarks > 0
+          ? Math.round((obtainedMarksValue / resolvedTotalMarks) * 100 * 100) / 100
           : null,
         createdAt: now,
         updatedAt: now
@@ -1127,7 +1127,7 @@ exports.getResultsForTeacher = async (req, res) => {
             maxMarks: matchingSubject.maxMarks || matchingSubject.totalMarks || 100,
             percentage: matchingSubject.percentage !== null ? matchingSubject.percentage : 0,
             grade: matchingSubject.grade || calculateSimpleGrade(
-              matchingSubject.obtainedMarks, 
+              matchingSubject.obtainedMarks,
               matchingSubject.maxMarks || matchingSubject.totalMarks || 100
             ),
             frozen: matchingSubject.frozen || false,
@@ -1139,7 +1139,7 @@ exports.getResultsForTeacher = async (req, res) => {
     }
 
     console.log(`✅ Formatted ${formattedResults.length} results for teacher view`);
-    
+
     // Log frozen status for debugging
     const frozenCount = formattedResults.filter(r => r.frozen).length;
     if (frozenCount > 0) {
@@ -1149,16 +1149,16 @@ exports.getResultsForTeacher = async (req, res) => {
     // Calculate statistics for teacher display
     const statistics = {
       totalStudents: formattedResults.length,
-      averageMarks: formattedResults.length > 0 
+      averageMarks: formattedResults.length > 0
         ? Math.round(formattedResults.reduce((sum, r) => sum + r.obtainedMarks, 0) / formattedResults.length)
         : 0,
       averagePercentage: formattedResults.length > 0
         ? Math.round(formattedResults.reduce((sum, r) => sum + r.percentage, 0) / formattedResults.length)
         : 0,
-      highestScore: formattedResults.length > 0 
+      highestScore: formattedResults.length > 0
         ? Math.max(...formattedResults.map(r => r.obtainedMarks))
         : 0,
-      lowestScore: formattedResults.length > 0 
+      lowestScore: formattedResults.length > 0
         ? Math.min(...formattedResults.map(r => r.obtainedMarks))
         : 0,
       passCount: formattedResults.filter(r => r.percentage >= 40).length,
@@ -1198,11 +1198,11 @@ exports.getResultsForTeacher = async (req, res) => {
 exports.getClassPerformanceStats = async (req, res) => {
   try {
     const schoolCode = req.user?.schoolCode;
-    
+
     if (!schoolCode) {
-      return res.status(400).json({ 
+      return res.status(400).json({
         success: false,
-        message: 'School code is required' 
+        message: 'School code is required'
       });
     }
 
@@ -1211,9 +1211,9 @@ exports.getClassPerformanceStats = async (req, res) => {
     const SchoolDatabaseManager = require('../utils/schoolDatabaseManager');
     const schoolConnection = await SchoolDatabaseManager.getSchoolConnection(schoolCode);
     const resultsCollection = schoolConnection.collection('results');
-    
+
     const results = await resultsCollection.find({}).toArray();
-    
+
     console.log(`[CLASS PERFORMANCE] Found ${results.length} result documents`);
 
     if (results.length === 0) {
@@ -1227,7 +1227,7 @@ exports.getClassPerformanceStats = async (req, res) => {
 
     results.forEach(result => {
       const classKey = `${result.className || 'Unknown'}-${result.section || 'A'}`;
-      
+
       if (!performanceMap[classKey]) {
         performanceMap[classKey] = {
           class: result.className || 'Unknown',
@@ -1252,10 +1252,10 @@ exports.getClassPerformanceStats = async (req, res) => {
 
     let performanceData = Object.values(performanceMap)
       .map(item => {
-        const avgPercentage = item.subjectCount > 0 
+        const avgPercentage = item.subjectCount > 0
           ? (item.totalPercentage / item.subjectCount).toFixed(1)
           : 0;
-        
+
         return {
           name: `${item.class}-${item.section}`,
           class: item.class,
@@ -1270,7 +1270,7 @@ exports.getClassPerformanceStats = async (req, res) => {
     for (let i = 1; i <= 10; i++) {
       const classKey = `${i}-A`;
       const existingClass = performanceData.find(item => item.name === classKey);
-      
+
       if (existingClass) {
         allClasses.push(existingClass);
       } else {
@@ -1327,10 +1327,10 @@ exports.getClassPerformanceStats = async (req, res) => {
 
   } catch (error) {
     console.error('Error fetching class performance stats:', error);
-    res.status(500).json({ 
+    res.status(500).json({
       success: false,
-      message: 'Error fetching class performance stats', 
-      error: error.message 
+      message: 'Error fetching class performance stats',
+      error: error.message
     });
   }
 };

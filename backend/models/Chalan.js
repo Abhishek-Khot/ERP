@@ -16,6 +16,10 @@ const chalanSchema = new mongoose.Schema({
     ref: 'User',
     required: true
   },
+  feeRecordId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'StudentFeeRecord'
+  },
   class: {
     type: String,
     required: true
@@ -28,18 +32,32 @@ const chalanSchema = new mongoose.Schema({
     type: Number,
     required: true
   },
+  paidAmount: {
+    type: Number,
+    default: 0
+  },
   dueDate: {
     type: Date,
     required: true
   },
   status: {
     type: String,
-    enum: ['unpaid', 'paid', 'cancelled'],
+    enum: ['unpaid', 'paid', 'partial', 'cancelled'],
     default: 'unpaid'
   },
   paymentId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Payment'
+  },
+  paymentDate: {
+    type: Date
+  },
+  paymentMethod: {
+    type: String,
+    enum: ['cash', 'cheque', 'bank_transfer', 'online', 'other']
+  },
+  paymentDetails: {
+    type: mongoose.Schema.Types.Mixed
   },
   installmentName: {
     type: String
@@ -63,10 +81,24 @@ chalanSchema.index({ chalanNumber: 1, schoolId: 1 }, { unique: true });
 chalanSchema.index({ studentId: 1, status: 1 });
 chalanSchema.index({ schoolId: 1, academicYear: 1 });
 
-// Pre-save hook to update updatedAt
+// Pre-save hook to update updatedAt and status
 chalanSchema.pre('save', function(next) {
   this.updatedAt = new Date();
+  
+  // Update status based on payment
+  if (this.paidAmount >= this.amount) {
+    this.status = 'paid';
+  } else if (this.paidAmount > 0) {
+    this.status = 'partial';
+  }
+  
   next();
 });
 
-module.exports = mongoose.model('Chalan', chalanSchema);
+// Export both the model and schema for dynamic registration in per-school databases
+const Chalan = mongoose.model('Chalan', chalanSchema);
+
+module.exports = {
+  schema: chalanSchema,
+  model: Chalan
+};

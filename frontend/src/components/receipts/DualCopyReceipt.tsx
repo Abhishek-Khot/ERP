@@ -78,8 +78,7 @@ const DualCopyReceipt: React.FC<DualCopyReceiptProps> = ({
       const formatted = date.toLocaleDateString('en-IN', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric',
-        timeZone: 'Asia/Kolkata' // Use Indian timezone
+        year: 'numeric'
       });
       console.log('Formatted date:', formatted);
       return formatted;
@@ -98,15 +97,13 @@ const DualCopyReceipt: React.FC<DualCopyReceiptProps> = ({
       const formattedDate = date.toLocaleDateString('en-IN', {
         day: '2-digit',
         month: '2-digit',
-        year: 'numeric',
-        timeZone: 'Asia/Kolkata'
+        year: 'numeric'
       });
       
       const formattedTime = date.toLocaleTimeString('en-IN', {
         hour: '2-digit',
         minute: '2-digit',
-        hour12: true,
-        timeZone: 'Asia/Kolkata'
+        hour12: true
       });
       
       return `${formattedDate} at ${formattedTime}`;

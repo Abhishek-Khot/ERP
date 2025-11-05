@@ -185,14 +185,7 @@ export function ViewAccess() {
     <div className="p-6">
       <div className="max-w-6xl mx-auto">
         <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setCurrentView('dashboard')}
-              className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
-            >
-              <ArrowLeft className="h-5 w-5" />
-              <span>Back to Dashboard</span>
-            </button>
+          <div>
             <h1 className="text-2xl font-bold text-gray-900">Access Control - {school.name}</h1>
           </div>
           <button

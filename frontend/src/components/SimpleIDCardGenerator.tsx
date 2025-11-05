@@ -91,7 +91,17 @@ const SimpleIDCardGenerator: React.FC<SimpleIDCardGeneratorProps> = ({
       console.log('✅ ID cards generated successfully:', response.data);
 
       if (response.data.success) {
-        setGeneratedCards(response.data.data.generated);
+        // Create a mock generated cards array since the new API doesn't return file paths
+        const mockGeneratedCards = selectedStudents.slice(0, response.data.data.totalGenerated).map((student, index) => ({
+          studentId: student._id || student.id,
+          studentName: student.name,
+          sequenceId: student.sequenceId || `STU${String(index + 1).padStart(3, '0')}`,
+          frontCard: null, // No file paths in new in-memory system
+          backCard: null,
+          success: true
+        }));
+        
+        setGeneratedCards(mockGeneratedCards);
         setShowResults(true);
         setOrientationLocked(true);
         toast.success(response.data.message);
@@ -227,9 +237,36 @@ const SimpleIDCardGenerator: React.FC<SimpleIDCardGeneratorProps> = ({
     }
   };
 
-  const handlePreview = (imagePath: string) => {
-    setPreviewImage(`${API_BASE_URL.replace('/api', '')}${imagePath}`);
-    setShowPreview(true);
+  const handlePreview = async (studentId: string, side: 'front' | 'back' = 'front') => {
+    try {
+      const authData = localStorage.getItem('erp.auth');
+      const token = authData ? JSON.parse(authData).token : null;
+      const schoolCode = localStorage.getItem('erp.schoolCode') || '';
+
+      console.log('🔍 Previewing ID card:', { studentId, side, orientation });
+
+      // Use the new in-memory preview endpoint
+      const previewUrl = `${API_BASE_URL}/id-card-templates/preview?studentId=${studentId}&orientation=${orientation}&side=${side}`;
+      
+      const response = await fetch(previewUrl, {
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'X-School-Code': schoolCode
+        }
+      });
+
+      if (response.ok) {
+        const blob = await response.blob();
+        const imageUrl = URL.createObjectURL(blob);
+        setPreviewImage(imageUrl);
+        setShowPreview(true);
+      } else {
+        toast.error('Failed to load preview');
+      }
+    } catch (error) {
+      console.error('Error loading preview:', error);
+      toast.error('Failed to load preview');
+    }
   };
 
   return (
@@ -415,17 +452,15 @@ const SimpleIDCardGenerator: React.FC<SimpleIDCardGeneratorProps> = ({
                             <p className="text-sm text-gray-500">ID: {card.studentId}</p>
                           </div>
                           <div className="flex gap-2">
-                            {card.frontCard && (
+                            <button
+                              onClick={() => handlePreview(card.studentId, 'front')}
+                              className="text-xs px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
+                            >
+                              View Front
+                            </button>
+                            {includeBack && (
                               <button
-                                onClick={() => handlePreview(card.frontCard)}
-                                className="text-xs px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
-                              >
-                                View Front
-                              </button>
-                            )}
-                            {card.backCard && (
-                              <button
-                                onClick={() => handlePreview(card.backCard)}
+                                onClick={() => handlePreview(card.studentId, 'back')}
                                 className="text-xs px-3 py-1 bg-blue-50 text-blue-600 rounded hover:bg-blue-100"
                               >
                                 View Back
@@ -494,6 +529,9 @@ const SimpleIDCardGenerator: React.FC<SimpleIDCardGeneratorProps> = ({
               <button
                 onClick={() => {
                   setShowPreview(false);
+                  if (previewImage) {
+                    URL.revokeObjectURL(previewImage);
+                  }
                   setPreviewImage(null);
                 }}
                 className="text-gray-500 hover:text-gray-700 text-2xl leading-none"

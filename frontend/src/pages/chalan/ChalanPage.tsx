@@ -45,6 +45,7 @@ const ChalanPage: React.FC = () => {
 
   const handlePrintChalan = (chalan: Chalan) => {
     console.log('Printing chalan:', chalan);
+    console.log('Chalan number:', chalan.chalanNumber);
     
     // Get school info from chalan or use defaults
     const schoolData = chalan.schoolData || {};
@@ -122,9 +123,8 @@ const ChalanPage: React.FC = () => {
           .office-copy .copy-type { background: #e74c3c; }
           .admin-copy .copy-type { background: #27ae60; }
           .challan-number {
-            background: #ecf0f1; padding: 4px; border-radius: 2px;
             font-weight: bold; font-size: 8px; color: #2c3e50;
-            text-align: center; margin-bottom: 8px;
+            text-align: left; margin-top: 4px; padding-left: 4px;
           }
           .content-section { display: flex; flex-direction: column; gap: 6px; }
           .info-group { margin-bottom: 6px; }
@@ -164,8 +164,8 @@ const ChalanPage: React.FC = () => {
               <div class="challan-title">FEE PAYMENT CHALAN</div>
               <div class="academic-year">Academic Year: ${chalan.academicYear || new Date().getFullYear()}</div>
               <span class="copy-type">STUDENT COPY</span>
+              <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
             </div>
-            <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
             <div class="content-section">
               <div class="info-group">
                 <div class="info-title">Bank Details:</div>
@@ -207,8 +207,8 @@ const ChalanPage: React.FC = () => {
               <div class="challan-title">FEE PAYMENT CHALAN</div>
               <div class="academic-year">Academic Year: ${chalan.academicYear || new Date().getFullYear()}</div>
               <span class="copy-type">OFFICE COPY</span>
+              <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
             </div>
-            <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
             <div class="content-section">
               <div class="info-group">
                 <div class="info-title">Bank Details:</div>
@@ -250,8 +250,8 @@ const ChalanPage: React.FC = () => {
               <div class="challan-title">FEE PAYMENT CHALAN</div>
               <div class="academic-year">Academic Year: ${chalan.academicYear || new Date().getFullYear()}</div>
               <span class="copy-type">ADMIN COPY</span>
+              <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
             </div>
-            <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
             <div class="content-section">
               <div class="info-group">
                 <div class="info-title">Bank Details:</div>
@@ -284,7 +284,7 @@ const ChalanPage: React.FC = () => {
       </html>
     `;
 
-    // Create the full print content with all three copies
+    // Create the full print content with all three copies - Updated v2
     const printContent = `
     <!DOCTYPE html>
     <html lang="en">
@@ -388,14 +388,12 @@ const ChalanPage: React.FC = () => {
             }
 
             .challan-number {
-                background: #ecf0f1;
-                padding: 4px;
-                border-radius: 2px;
                 font-weight: bold;
                 font-size: 8px;
                 color: #2c3e50;
-                text-align: center;
-                margin-bottom: 8px;
+                text-align: left;
+                margin-top: 4px;
+                padding-left: 4px;
             }
 
             .content-section {
@@ -485,9 +483,8 @@ const ChalanPage: React.FC = () => {
                     <div class="challan-title">FEE PAYMENT CHALAN</div>
                     <div class="academic-year">Academic Year: ${chalan.academicYear || '2024-25'}</div>
                     <span class="copy-type">STUDENT COPY</span>
+                    <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
                 </div>
-
-                <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
 
                 <div class="content-section">
                     <div class="info-group">
@@ -571,9 +568,8 @@ const ChalanPage: React.FC = () => {
                     <div class="challan-title">FEE PAYMENT CHALAN</div>
                     <div class="academic-year">Academic Year: ${chalan.academicYear || '2024-25'}</div>
                     <span class="copy-type">OFFICE COPY</span>
+                    <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
                 </div>
-
-                <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
 
                 <div class="content-section">
                     <div class="info-group">
@@ -657,9 +653,8 @@ const ChalanPage: React.FC = () => {
                     <div class="challan-title">FEE PAYMENT CHALAN</div>
                     <div class="academic-year">Academic Year: ${chalan.academicYear || '2024-25'}</div>
                     <span class="copy-type">ADMIN COPY</span>
+                    <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
                 </div>
-
-                <div class="challan-number">Chalan: ${chalan.chalanNumber || 'N/A'}</div>
 
                 <div class="content-section">
                     <div class="info-group">
@@ -740,13 +735,13 @@ const ChalanPage: React.FC = () => {
       printWindow.document.open();
       printWindow.document.write(printContent);
       
-      // Set a fallback in case onload doesn't fire
+      // Set a fallback in case onload doesn't fire - increased timeout for better rendering
       const printTimeout = setTimeout(() => {
         if (printWindow.document.readyState === 'complete') {
           printWindow.focus();
           printWindow.print();
         }
-      }, 1000);
+      }, 1500);
       
       // Handle the print dialog when content is loaded
       printWindow.document.addEventListener('DOMContentLoaded', () => {

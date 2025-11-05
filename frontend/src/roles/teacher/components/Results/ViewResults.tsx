@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 
 const ViewResults: React.FC = () => {
   const { user, token } = useAuth();
-  
+
   // Use the useSchoolClasses hook to fetch classes configured by superadmin
   const {
     classesData,
@@ -27,12 +27,12 @@ const ViewResults: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loadingSubjects, setLoadingSubjects] = useState(false);
   const [loadingTestTypes, setLoadingTestTypes] = useState(false);
-  
+
   // State for inline editing
   const [editingResultId, setEditingResultId] = useState<string | null>(null);
   const [editingMarks, setEditingMarks] = useState<number | null>(null);
   const [savingResultId, setSavingResultId] = useState<string | null>(null);
-  
+
   // State for freeze functionality
   const [isFrozen, setIsFrozen] = useState(false);
 
@@ -236,7 +236,7 @@ const ViewResults: React.FC = () => {
     setSavingResultId(resultId);
     try {
       const schoolCode = localStorage.getItem('erp.schoolCode') || user?.schoolCode || '';
-      
+
       // Call update API
       await resultsAPI.updateResult(resultId, {
         schoolCode,
@@ -266,7 +266,7 @@ const ViewResults: React.FC = () => {
       // Clear editing state
       setEditingResultId(null);
       setEditingMarks(null);
-      
+
       toast.success('Result updated successfully!');
     } catch (error: any) {
       console.error('Error updating result:', error);
@@ -298,7 +298,7 @@ const ViewResults: React.FC = () => {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">View Results</h1>
           <p className="text-gray-600">Student performance reports for your subjects</p>
         </div>
-        
+
         <button className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors mt-4 sm:mt-0">
           <Download className="h-4 w-4 mr-2" />
           Export Results
@@ -380,7 +380,7 @@ const ViewResults: React.FC = () => {
           </div>
 
           <div className="flex items-end">
-            <button 
+            <button
               className="w-full px-4 py-1.5 text-sm bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-gray-400 disabled:cursor-not-allowed"
               disabled={!selectedClass || !selectedSection || !selectedSubject || !selectedExam || loading}
               onClick={async () => {
@@ -408,16 +408,16 @@ const ViewResults: React.FC = () => {
                   }
 
                   const data = await response.json();
-                  
+
                   if (data.success) {
                     const resultsData = data.data.results || [];
                     setResults(resultsData);
-                    
+
                     // Check if results are frozen
                     const firstResult = resultsData[0];
                     const frozen = firstResult?.frozen || false;
                     setIsFrozen(frozen);
-                    
+
                     if (frozen) {
                       toast.error(`⚠️ Results are FROZEN and cannot be edited. Loaded ${resultsData.length} result(s).`, { duration: 5000 });
                     } else {

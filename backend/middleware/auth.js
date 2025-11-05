@@ -20,10 +20,7 @@ const auth = async (req, res, next) => {
 
     console.log('[DEBUG] mainDb in auth middleware:', req.mainDb);
 
-    if (!req.mainDb) {
-      console.error('[AUTH ERROR] mainDb is not defined on the request object');
-      return res.status(500).json({ success: false, message: 'Database connection error' });
-    }
+    // Note: mainDb is not always required in auth middleware, it's set by setMainDbContext middleware when needed
 
     // Handle different user ID formats based on userType
     let userId = decoded.userId;

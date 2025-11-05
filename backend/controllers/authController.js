@@ -21,7 +21,7 @@ exports.register = async (req, res) => {
 
 exports.login = async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, role: selectedRole } = req.body;
     console.log(`🔍 Attempting login for email: ${email}`);
 
     let user;
@@ -42,6 +42,12 @@ exports.login = async (req, res) => {
       if (!user.isActive) {
         console.log(`[LOGIN FAIL] SuperAdmin is deactivated: ${email}`);
         return res.status(400).json({ message: 'Account has been deactivated. Contact system administrator.' });
+      }
+
+      // Validate that selected role matches user's actual role for SuperAdmin
+      if (selectedRole && selectedRole !== user.role) {
+        console.log(`[LOGIN FAIL] Role mismatch - Selected: ${selectedRole}, Actual: ${user.role} for superadmin: ${email}`);
+        return res.status(400).json({ message: `Invalid credentials. You selected ${selectedRole} but your account is registered as ${user.role}.` });
       }
 
       // Update last login
@@ -92,6 +98,12 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: 'Account has been deactivated. Contact your administrator.' });
     }
 
+    // Validate that selected role matches user's actual role
+    if (selectedRole && selectedRole !== user.role) {
+      console.log(`[LOGIN FAIL] Role mismatch - Selected: ${selectedRole}, Actual: ${user.role} for user: ${email}`);
+      return res.status(400).json({ message: `Invalid credentials. You selected ${selectedRole} but your account is registered as ${user.role}.` });
+    }
+
     user.lastLogin = new Date();
     await user.save();
 
@@ -126,7 +138,7 @@ exports.login = async (req, res) => {
 // School-specific login (supports both email and user ID)
 exports.schoolLogin = async (req, res) => {
   try {
-    const { identifier, password, schoolCode } = req.body;
+    const { identifier, password, schoolCode, role: selectedRole } = req.body;
     
     if (!identifier || !password || !schoolCode) {
       return res.status(400).json({ 
@@ -187,6 +199,15 @@ exports.schoolLogin = async (req, res) => {
       return res.status(400).json({ 
         success: false,
         message: 'Account has been deactivated. Contact your administrator.' 
+      });
+    }
+
+    // Validate that selected role matches user's actual role
+    if (selectedRole && selectedRole !== user.role) {
+      console.log(`[SCHOOL LOGIN FAIL] Role mismatch - Selected: ${selectedRole}, Actual: ${user.role} for user: ${identifier}`);
+      return res.status(400).json({ 
+        success: false,
+        message: `Invalid credentials. You selected ${selectedRole} but your account is registered as ${user.role}.` 
       });
     }
 

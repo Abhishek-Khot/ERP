@@ -97,11 +97,11 @@ const schoolSchema = new mongoose.Schema({
     },
     teacher: {
       manageUsers: { type: Boolean, default: false },
-      manageSchoolSettings: { type: Boolean, default: false },
+      manageSchoolSettings: { type: mongoose.Schema.Types.Mixed, default: false },
       viewTimetable: { type: Boolean, default: true },
       markAttendance: { type: Boolean, default: true },
       viewAttendance: { type: Boolean, default: true },
-      viewResults: { type: Boolean, default: true },
+      viewResults: { type: mongoose.Schema.Types.Mixed, default: 'own' },
       messageStudentsParents: { type: Boolean, default: true },
       viewAcademicDetails: { type: Boolean, default: false },
       viewAssignments: { type: Boolean, default: true },

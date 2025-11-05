@@ -9,11 +9,14 @@ const {
   deleteTemplate,
   setDefaultTemplate
 } = require('../controllers/idCardTemplateController');
+// Import in-memory controllers (no file storage)
 const {
+  previewIDCard,
+  previewIDCardBase64,
   generateIDCards,
-  downloadIDCards,
-  previewIDCard
-} = require('../controllers/simpleIDCardController');
+  generateAndDownloadIDCards: downloadIDCards,
+  generateBulkPreview
+} = require('../controllers/idCardGenerationController');
 const { auth } = require('../middleware/auth');
 const { setSchoolContext } = require('../middleware/schoolContext');
 
@@ -21,10 +24,12 @@ const { setSchoolContext } = require('../middleware/schoolContext');
 router.use(auth);
 router.use(setSchoolContext);
 
-// ID Card Generation Routes (Simple - using PNG templates directly)
+// ID Card Generation Routes (In-Memory - No file storage)
 router.post('/generate', generateIDCards);
 router.post('/download', downloadIDCards);
 router.get('/preview', previewIDCard);
+router.get('/preview-base64', previewIDCardBase64);
+router.post('/bulk-preview', generateBulkPreview);
 
 // Get all templates for the school
 router.get('/', getTemplates);

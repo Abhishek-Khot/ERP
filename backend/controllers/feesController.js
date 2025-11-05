@@ -6,6 +6,38 @@ const SchoolDatabaseManager = require('../utils/schoolDatabaseManager');
 const { ObjectId } = require('mongodb');
 const PDFDocument = require('pdfkit');
 
+// Helper function to generate challan number
+async function generateChalanNumber(schoolCode, db) {
+  try {
+    const safeSchoolCode = (schoolCode || 'SCH').toUpperCase();
+    const countersCol = db.collection('counters');
+    const counterKey = `chalan:${safeSchoolCode}`;
+    
+    const seqDoc = await countersCol.findOneAndUpdate(
+      { _id: counterKey },
+      {
+        $setOnInsert: { createdAt: new Date() },
+        $inc: { seq: 1 },
+        $set: { updatedAt: new Date() }
+      },
+      { upsert: true, returnDocument: 'after' }
+    );
+    
+    let seqVal = (seqDoc && seqDoc.value && typeof seqDoc.value.seq === 'number') ? seqDoc.value.seq : undefined;
+    if (typeof seqVal !== 'number') {
+      const doc = await countersCol.findOne({ _id: counterKey });
+      seqVal = (doc && typeof doc.seq === 'number') ? doc.seq : 1;
+    }
+    
+    const sequenceStr = String(seqVal).padStart(4, '0');
+    return `CRN-${safeSchoolCode}-${sequenceStr}`;
+  } catch (error) {
+    console.error('Error generating challan number:', error);
+    const timestamp = Date.now().toString().slice(-6);
+    return `CRN-${schoolCode || 'SCH'}-${timestamp}`;
+  }
+}
+
 // Export student fee records to CSV
 exports.exportStudentFeeRecords = async (req, res) => {
   console.log('🔵 Starting fee records export process');
@@ -607,6 +639,7 @@ async function applyFeeStructureToStudents_PerschoolDB(feeStructure, schoolCode)
       return ({
     schoolId: new ObjectId(feeStructure.schoolId),
     studentId: new ObjectId(student._id),
+    userId: student.userId, // User-friendly ID like KVS-S-0003
     feeStructureId: new ObjectId(feeStructure._id),
     studentName: resolvedName,
     studentClass: resolvedClass,
@@ -936,11 +969,28 @@ exports.recordOfflinePayment = async (req, res) => {
     const receiptNumber = `RCP-${schoolCodeStr}-${academicYear}-${seqPadded}`;
     
     // Create payment record
+    // Parse payment date correctly to avoid timezone issues
+    // If paymentDate is in YYYY-MM-DD format, treat it as local date at noon to avoid timezone conversion issues
+    let parsedPaymentDate;
+    if (paymentDate) {
+      // Check if it's a date-only string (YYYY-MM-DD)
+      if (/^\d{4}-\d{2}-\d{2}$/.test(paymentDate)) {
+        // Parse as local date at noon to avoid timezone issues
+        const [year, month, day] = paymentDate.split('-').map(Number);
+        parsedPaymentDate = new Date(year, month - 1, day, 12, 0, 0);
+      } else {
+        // Parse as-is if it includes time
+        parsedPaymentDate = new Date(paymentDate);
+      }
+    } else {
+      parsedPaymentDate = new Date();
+    }
+    
     const payment = {
       paymentId: new ObjectId(),
       installmentName,
       amount: parseFloat(amount),
-      paymentDate: paymentDate ? new Date(paymentDate) : new Date(),
+      paymentDate: parsedPaymentDate,
       paymentMethod,
       paymentReference: paymentReference || '',
       receivedBy: new ObjectId(req.user._id),
@@ -1002,6 +1052,120 @@ exports.recordOfflinePayment = async (req, res) => {
     );
     
     console.log(`✅ Payment recorded: ${receiptNumber}`);
+    
+    // Auto-generate challan for remaining amount
+    const chalansCol = db.collection('chalans');
+    const paidInstallment = installments.find(i => i.name === installmentName);
+    
+    if (paidInstallment) {
+      const remainingAmount = paidInstallment.amount - paidInstallment.paidAmount;
+      
+      // If installment is not fully paid, generate challan for remaining amount
+      if (remainingAmount > 0) {
+        console.log(`💰 Generating challan for remaining amount: ${remainingAmount}`);
+        
+        // Generate challan number
+        const Chalan = require('../models/Chalan');
+        const chalanNumber = await generateChalanNumber(schoolCode, db);
+        
+        // Create challan document
+        const chalanDoc = {
+          chalanNumber,
+          schoolId: new ObjectId(req.user.schoolId),
+          studentId: new ObjectId(feeRecord.studentId),
+          feeRecordId: feeRecord._id,
+          class: feeRecord.studentClass,
+          section: feeRecord.studentSection,
+          amount: remainingAmount,
+          paidAmount: 0,
+          dueDate: paidInstallment.dueDate,
+          status: 'unpaid',
+          installmentName,
+          academicYear: feeRecord.academicYear,
+          createdAt: new Date(),
+          updatedAt: new Date()
+        };
+        
+        const chalanResult = await chalansCol.insertOne(chalanDoc);
+        
+        // Add challan to fee record's challans array
+        await studentFeeCol.updateOne(
+          { _id: feeRecord._id },
+          {
+            $push: {
+              challans: {
+                chalanId: chalanResult.insertedId,
+                chalanNumber,
+                installmentName,
+                amount: remainingAmount,
+                paidAmount: 0,
+                dueDate: paidInstallment.dueDate,
+                issueDate: new Date(),
+                status: 'unpaid',
+                createdAt: new Date(),
+                updatedAt: new Date()
+              }
+            }
+          }
+        );
+        
+        console.log(`✅ Auto-generated challan ${chalanNumber} for remaining amount: ${remainingAmount}`);
+      } else if (remainingAmount === 0) {
+        // Installment fully paid, check if there's a next installment
+        const nextPendingInstallment = installments.find(i => 
+          i.status === 'pending' && i.name !== installmentName
+        );
+        
+        if (nextPendingInstallment) {
+          console.log(`📋 Generating challan for next installment: ${nextPendingInstallment.name}`);
+          
+          const chalanNumber = await generateChalanNumber(schoolCode, db);
+          
+          const chalanDoc = {
+            chalanNumber,
+            schoolId: new ObjectId(req.user.schoolId),
+            studentId: new ObjectId(feeRecord.studentId),
+            feeRecordId: feeRecord._id,
+            class: feeRecord.studentClass,
+            section: feeRecord.studentSection,
+            amount: nextPendingInstallment.amount,
+            paidAmount: 0,
+            dueDate: nextPendingInstallment.dueDate,
+            status: 'unpaid',
+            installmentName: nextPendingInstallment.name,
+            academicYear: feeRecord.academicYear,
+            createdAt: new Date(),
+            updatedAt: new Date()
+          };
+          
+          const chalanResult = await chalansCol.insertOne(chalanDoc);
+          
+          await studentFeeCol.updateOne(
+            { _id: feeRecord._id },
+            {
+              $push: {
+                challans: {
+                  chalanId: chalanResult.insertedId,
+                  chalanNumber,
+                  installmentName: nextPendingInstallment.name,
+                  amount: nextPendingInstallment.amount,
+                  paidAmount: 0,
+                  dueDate: nextPendingInstallment.dueDate,
+                  issueDate: new Date(),
+                  status: 'unpaid',
+                  createdAt: new Date(),
+                  updatedAt: new Date()
+                }
+              }
+            }
+          );
+          
+          console.log(`✅ Auto-generated challan ${chalanNumber} for next installment: ${nextPendingInstallment.name}`);
+        } else {
+          console.log(`✅ All fees paid! No more challans to generate.`);
+        }
+      }
+    }
     
     res.json({
       success: true,

@@ -58,7 +58,7 @@ export default function Login() {
   // Auto-fill demo creds when role changes (only for superadmin)
   const onPickRole = (role: RoleKey) => {
     setSelectedRole(role);
-    
+
     // Only auto-fill credentials for superadmin, keep others blank
     if (role === 'superadmin') {
       setEmail(roleMeta[role].demoEmail);
@@ -117,10 +117,10 @@ export default function Login() {
     setLoading(true);
     try {
       // Include school code if provided (not empty)
-      const loginPayload = schoolCode && schoolCode.trim() 
+      const loginPayload = schoolCode && schoolCode.trim()
         ? { email, password, schoolCode: schoolCode.trim(), role: selectedRole }
         : { email, password, role: selectedRole };
-      
+
       await login(loginPayload);
       const from = location.state?.from as string | undefined;
       navigate(from ?? "/", { replace: true });
@@ -145,17 +145,16 @@ export default function Login() {
         <div className="max-w-5xl mx-auto bg-white/90 backdrop-blur shadow-2xl rounded-3xl px-6 md:px-12 py-10">
           <div className="grid md:grid-cols-2 gap-10 items-center">
             {/* Left: Brand / Greeting */}
-            <div className="space-y-4">
+            <div className="space-y-4 flex flex-col items-center text-center">
               <div className="w-40 h-40 rounded-3xl bg-violet-100 flex items-center justify-center overflow-hidden shadow-lg">
                 <img src="/logo.png" alt="School Logo" className="w-36 h-36 object-contain" />
               </div>
               <h1 className="text-3xl md:text-4xl font-extrabold">
-                <span className="text-slate-800">School </span>
                 <span className="bg-gradient-to-r from-fuchsia-500 via-violet-500 to-blue-500 bg-clip-text text-transparent">
-                  ERP
+                  EduLogix
                 </span>
               </h1>
-              <p className="text-slate-500 text-lg">Welcome back, superstar! ✨</p>
+              <p className="text-slate-500 text-xl md:text-2xl font-semibold">Welcome back, superstar! ✨</p>
             </div>
 
             {/* Right: Form */}
@@ -204,23 +203,22 @@ export default function Login() {
                 </div>
               </div>
 
-              {/* School Code field - optional for all roles */}
-              <div className="space-y-1">
-                <label className="text-sm text-slate-600">
-                  School Code 
-                  <span className="text-xs text-slate-400 ml-1">(optional for SuperAdmin)</span>
-                </label>
-                <input
-                  type="text"
-                  className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400"
-                  placeholder="Enter school code (e.g., 'p')"
-                  value={schoolCode}
-                  onChange={(e) => setSchoolCode(e.target.value)}
-                />
-                <p className="text-xs text-slate-400">
-                  Leave empty for SuperAdmin login, or enter your school code for school-specific login
-                </p>
-              </div>
+              {/* School Code field - only for admin and teacher */}
+              {selectedRole !== 'superadmin' && (
+                <div className="space-y-1">
+                  <label className="text-sm text-slate-600">
+                    School Code
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-200 focus:border-violet-400"
+                    placeholder="Enter school code (e.g., 'p')"
+                    value={schoolCode}
+                    onChange={(e) => setSchoolCode(e.target.value)}
+                    required
+                  />
+                </div>
+              )}
 
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm text-slate-600">
@@ -248,7 +246,7 @@ export default function Login() {
                 className="w-full h-12 rounded-xl text-white font-medium shadow-lg disabled:opacity-60
                   bg-gradient-to-r from-violet-600 via-fuchsia-500 to-blue-500 hover:opacity-95 transition"
               >
-                {loading ? "Signing you in…" : "Let’s Go!"}
+                {loading ? "Signing you in…" : "Let's Go!"}
               </button>
 
               {/* hint for testers */}

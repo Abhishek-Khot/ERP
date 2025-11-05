@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../auth/AuthContext';
 
 interface ClassOption {
@@ -153,6 +153,15 @@ export const useSchoolClasses = () => {
     fetchSchoolClasses();
   }, [user?.schoolCode, token]);
 
+  // Memoize helper functions to prevent infinite re-renders
+  const getClassOptions = useCallback(() => classesData?.classOptions || [], [classesData?.classOptions]);
+  const getAllSections = useCallback(() => classesData?.allSections || [], [classesData?.allSections]);
+  const getSectionsByClass = useCallback((className: string) => classesData?.sectionsByClass[className] || [], [classesData?.sectionsByClass]);
+  const hasClasses = useCallback(() => (classesData?.totalClasses || 0) > 0, [classesData?.totalClasses]);
+  const getAllTests = useCallback(() => classesData?.tests || [], [classesData?.tests]);
+  const getTestsByClass = useCallback((className: string) => classesData?.testsByClass[className] || [], [classesData?.testsByClass]);
+  const hasTests = useCallback(() => (classesData?.totalTests || 0) > 0, [classesData?.totalTests]);
+
   return {
     classesData,
     loading,
@@ -160,13 +169,13 @@ export const useSchoolClasses = () => {
     refetch: fetchSchoolClasses,
     getSectionsForClass,
     // Helper functions
-    getClassOptions: () => classesData?.classOptions || [],
-    getAllSections: () => classesData?.allSections || [],
-    getSectionsByClass: (className: string) => classesData?.sectionsByClass[className] || [],
-    hasClasses: () => (classesData?.totalClasses || 0) > 0,
+    getClassOptions,
+    getAllSections,
+    getSectionsByClass,
+    hasClasses,
     // Test helper functions
-    getAllTests: () => classesData?.tests || [],
-    getTestsByClass: (className: string) => classesData?.testsByClass[className] || [],
-    hasTests: () => (classesData?.totalTests || 0) > 0
+    getAllTests,
+    getTestsByClass,
+    hasTests
   };
 };

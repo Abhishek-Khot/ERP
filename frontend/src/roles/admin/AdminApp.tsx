@@ -60,7 +60,7 @@ export function AdminApp() {
             </PermissionGuard>
 
           } />
-          
+
           <Route path="manage-users" element={
             <PermissionGuard permission="manageUsers" permissionName="User Management">
               <ManageUsers />
@@ -68,7 +68,7 @@ export function AdminApp() {
 
           } />
 
-          
+
 
           {/* School Settings - Requires manageSchoolSettings permission */}
           <Route path="settings" element={

@@ -7,7 +7,7 @@ const assignmentSchema = new mongoose.Schema({
   subject: { type: String, required: true },
   class: { type: String, required: true },
   section: { type: String, required: true },
-  teacher: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  teacher: { type: String, required: true }, // Store teacher userId (e.g., "KVS-T-0046")
   
   // Assignment details
   startDate: { type: Date, required: true },
@@ -40,8 +40,8 @@ const assignmentSchema = new mongoose.Schema({
   term: { type: String, default: 'Term 1' },
   
   // Created and updated by
-  createdBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-  updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  createdBy: { type: String, required: true }, // Store userId (e.g., "KVS-T-0046")
+  updatedBy: { type: String }, // Store userId (e.g., "KVS-T-0046")
   
   // Timestamps
   createdAt: { type: Date, default: Date.now },

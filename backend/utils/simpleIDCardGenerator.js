@@ -1,6 +1,7 @@
 const sharp = require('sharp');
 const path = require('path');
 const fs = require('fs').promises;
+const axios = require('axios');
 
 /**
  * Simple ID Card Generator
@@ -265,8 +266,8 @@ class SimpleIDCardGenerator {
       return {
         address: { x: 400, y: 116, fontSize: 20, fontWeight: 'bold', maxWidth: 650, multiLine: true, maxCharsPerLine: 52, lineHeight: 1.3, minFontSize: 16, maxLines: 4, autoSize: false },
         mobile: { x: 520, y: 183, fontSize: 23, fontWeight: 'bold', maxWidth: 200 },
-        returnSchoolName: { x: 270, y: 415, fontSize: 23, fontWeight: 'bold', maxWidth: 750, multiLine: true, maxCharsPerLine: 50, lineHeight: 1.2, minFontSize: 16, maxLines: 2, autoSize: true },
-        returnAddress: { x: 170, y: 450, fontSize: 23, fontWeight: 'bold', maxWidth: 650, multiLine: true, maxCharsPerLine: 50, lineHeight: 1.2, minFontSize: 16, maxLines: 2, autoSize: true, textAlign: 'center' },
+        returnSchoolName: { x: 170, y: 415, fontSize: 23, fontWeight: 'bold', maxWidth: 750, multiLine: true, maxCharsPerLine: 50, lineHeight: 1.2, minFontSize: 16, maxLines: 2, autoSize: true, textAlign: 'center' },
+        returnAddress: { x: 170, y: 450, fontSize: 23, fontWeight: 'bold', maxWidth: 750, multiLine: true, maxCharsPerLine: 50, lineHeight: 1.2, minFontSize: 16, maxLines: 2, autoSize: true, textAlign: 'center' },
         schoolPhone: { x: 270, y: 510, fontSize: 20, fontWeight: 'bold', maxWidth: 650 },
         schoolEmail: { x: 470, y: 510, fontSize: 20, fontWeight: 'bold', maxWidth: 650 }
       };
@@ -343,17 +344,28 @@ class SimpleIDCardGenerator {
       if (side === 'front' && positions.schoolLogo && schoolInfo.logoUrl) {
         try {
           let logoPath = schoolInfo.logoUrl;
+          let logoBuffer;
 
-          // Handle relative paths
-          if (logoPath.startsWith('/uploads')) {
-            logoPath = path.join(__dirname, '..', logoPath);
+          // Check if it's a Cloudinary URL or external URL
+          if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
+            // Fetch from URL (Cloudinary or external)
+            const axios = require('axios');
+            const response = await axios.get(logoPath, { responseType: 'arraybuffer' });
+            logoBuffer = Buffer.from(response.data);
+            console.log(`✅ Fetched school logo from URL: ${logoPath}`);
+          } else {
+            // Handle relative paths (local files)
+            if (logoPath.startsWith('/uploads')) {
+              logoPath = path.join(__dirname, '..', logoPath);
+            }
+            // Check if file exists
+            await fs.access(logoPath);
+            logoBuffer = await fs.readFile(logoPath);
+            console.log(`✅ Loaded school logo from local: ${logoPath}`);
           }
 
-          // Check if file exists
-          await fs.access(logoPath);
-
           // Resize and add logo
-          const logoBuffer = await sharp(logoPath)
+          const resizedLogoBuffer = await sharp(logoBuffer)
             .resize(positions.schoolLogo.width, positions.schoolLogo.height, {
               fit: 'contain',
               background: { r: 255, g: 255, b: 255, alpha: 0 }
@@ -361,12 +373,12 @@ class SimpleIDCardGenerator {
             .toBuffer();
 
           compositeImages.push({
-            input: logoBuffer,
+            input: resizedLogoBuffer,
             top: positions.schoolLogo.y,
             left: positions.schoolLogo.x
           });
         } catch (logoError) {
-          console.warn('School logo processing skipped:', logoError.message);
+          console.warn('⚠️ School logo processing skipped:', logoError.message);
         }
       }
 
@@ -482,17 +494,28 @@ class SimpleIDCardGenerator {
       if (side === 'front' && positions.photo && student.profileImage) {
         try {
           let photoPath = student.profileImage;
+          let photoBuffer;
 
-          // Handle relative paths
-          if (photoPath.startsWith('/uploads')) {
-            photoPath = path.join(__dirname, '..', photoPath);
+          // Check if it's a Cloudinary URL or external URL
+          if (photoPath.startsWith('http://') || photoPath.startsWith('https://')) {
+            // Fetch from URL (Cloudinary or external)
+            const axios = require('axios');
+            const response = await axios.get(photoPath, { responseType: 'arraybuffer' });
+            photoBuffer = Buffer.from(response.data);
+            console.log(`✅ Fetched student photo from URL: ${photoPath.substring(0, 50)}...`);
+          } else {
+            // Handle relative paths (local files)
+            if (photoPath.startsWith('/uploads')) {
+              photoPath = path.join(__dirname, '..', photoPath);
+            }
+            // Check if file exists
+            await fs.access(photoPath);
+            photoBuffer = await fs.readFile(photoPath);
+            console.log(`✅ Loaded student photo from local: ${photoPath}`);
           }
 
-          // Check if file exists
-          await fs.access(photoPath);
-
           // Resize and add photo
-          const photoBuffer = await sharp(photoPath)
+          const resizedPhotoBuffer = await sharp(photoBuffer)
             .resize(positions.photo.width, positions.photo.height, {
               fit: 'cover',
               position: 'center'
@@ -500,12 +523,13 @@ class SimpleIDCardGenerator {
             .toBuffer();
 
           compositeImages.push({
-            input: photoBuffer,
+            input: resizedPhotoBuffer,
             top: positions.photo.y,
             left: positions.photo.x
           });
         } catch (photoError) {
-          console.warn('Photo processing skipped:', photoError.message);
+          console.warn('⚠️ Student photo processing skipped:', photoError.message);
+          console.warn('Photo path:', student.profileImage);
         }
       }
 
@@ -1095,6 +1119,78 @@ class SimpleIDCardGenerator {
           section: student.section
         }
       });
+      throw error;
+    }
+  }
+
+  /**
+   * Download image from URL or read from local path
+   */
+  async downloadImage(imagePath) {
+    try {
+      if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+        // Fetch from URL (Cloudinary or external)
+        const axios = require('axios');
+        const response = await axios.get(imagePath, { responseType: 'arraybuffer' });
+        return Buffer.from(response.data);
+      } else {
+        // Handle relative paths (local files)
+        if (imagePath.startsWith('/uploads')) {
+          imagePath = path.join(__dirname, '..', imagePath);
+        }
+        // Check if file exists
+        await fs.access(imagePath);
+        return await fs.readFile(imagePath);
+      }
+    } catch (error) {
+      console.warn(`⚠️ Could not load image from ${imagePath}:`, error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Generate ID card as buffer (in-memory) without saving to disk
+   */
+  async generateIDCardBuffer(student, orientation = 'landscape', side = 'front', schoolInfo = {}) {
+    try {
+      console.log(`🎨 Generating ID card buffer for ${student.name} (${orientation} ${side})`);
+
+      // Get template path
+      const templateFilename = `${orientation}-${side}.png`;
+      const templatePath = path.join(this.templatesDir, templateFilename);
+
+      // Check if template exists
+      try {
+        await fs.access(templatePath);
+      } catch (err) {
+        throw new Error(`Template not found: ${templatePath}`);
+      }
+
+      // Load template
+      const templateBuffer = await fs.readFile(templatePath);
+
+      // Get field positions for this orientation and side
+      const positions = this.getFieldPositions(orientation, side);
+
+      // Array to store all composite images
+      const compositeImages = [];
+
+      // Track field heights for dynamic positioning (portrait mode)
+      const fieldHeights = {};
+
+      // Use the same logic as the original generateIDCard method
+      const result = await this.generateIDCard(student, orientation, side, schoolInfo);
+
+      // Read the generated file and return as buffer
+      const generatedBuffer = await fs.readFile(result.outputPath);
+
+      // Clean up the temporary file
+      await fs.unlink(result.outputPath);
+
+      return generatedBuffer;
+
+    } catch (error) {
+      console.error(`❌ Error generating ID card buffer for ${student.name}:`, error);
       throw error;
     }
   }

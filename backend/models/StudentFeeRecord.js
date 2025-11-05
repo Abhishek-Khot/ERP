@@ -56,6 +56,27 @@ const studentFeeRecordSchema = new mongoose.Schema({
     isVerified: { type: Boolean, default: false }
   }],
   
+  // Challans (fee collection slips)
+  challans: [{
+    chalanId: mongoose.Schema.Types.ObjectId,
+    chalanNumber: { type: String, required: true },
+    installmentName: String,
+    amount: { type: Number, required: true, min: 0 },
+    paidAmount: { type: Number, default: 0, min: 0 },
+    dueDate: { type: Date, required: true },
+    issueDate: { type: Date, default: Date.now },
+    status: { 
+      type: String, 
+      enum: ['unpaid', 'paid', 'partial', 'cancelled'], 
+      default: 'unpaid' 
+    },
+    paymentDate: Date,
+    paymentMethod: String,
+    paymentDetails: mongoose.Schema.Types.Mixed,
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
+  }],
+  
   // Status tracking
   status: { 
     type: String, 

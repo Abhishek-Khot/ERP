@@ -14,35 +14,60 @@ const SchoolEditDetails: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  console.log('[SchoolEditDetails] Component rendered, selectedSchoolId:', selectedSchoolId);
+
   useEffect(() => {
+    console.log('[SchoolEditDetails] useEffect triggered, selectedSchoolId:', selectedSchoolId);
     const fetch = async () => {
-      if (!selectedSchoolId) return;
+      if (!selectedSchoolId) {
+        console.log('[SchoolEditDetails] No selectedSchoolId, skipping fetch');
+        return;
+      }
+      console.log('[SchoolEditDetails] Starting fetch for school:', selectedSchoolId);
       setLoading(true);
       setError(null);
       try {
         const res = await api.get(`/schools/${selectedSchoolId}`);
-        console.log('School edit data fetched:', res.data);
-        console.log('Key fields check:', {
-          mobile: res.data.mobile,
-          contactPhone: res.data.contact?.phone,
-          principalName: res.data.principalName,
-          principalEmail: res.data.principalEmail,
-          address: res.data.address,
-          contact: res.data.contact,
+        console.log('[SchoolEditDetails] Raw API response:', res.data);
+        
+        // Extract the actual school data - API returns {success: true, data: {...}}
+        const schoolData = res.data.data || res.data;
+        console.log('[SchoolEditDetails] Extracted school data:', schoolData);
+        
+        console.log('[SchoolEditDetails] Key fields check:', {
+          mobile: schoolData.mobile,
+          contactPhone: schoolData.contact?.phone,
+          principalName: schoolData.principalName,
+          principalEmail: schoolData.principalEmail,
+          address: schoolData.address,
+          contact: schoolData.contact,
           // Check for address fields at root level too
-          street: res.data.street,
-          area: res.data.area,
-          city: res.data.city,
-          district: res.data.district,
-          pinCode: res.data.pinCode,
-          state: res.data.state
+          street: schoolData.street,
+          area: schoolData.area,
+          city: schoolData.city,
+          district: schoolData.district,
+          pinCode: schoolData.pinCode,
+          state: schoolData.state
         });
-        setProfile(res.data);
-        setForm(res.data);
+        
+        if (!schoolData) {
+          throw new Error('No data received from API');
+        }
+        
+        setProfile(schoolData);
+        setForm(schoolData);
+        console.log('[SchoolEditDetails] Profile and form state updated successfully');
       } catch (e: any) {
-        setError(e?.message || 'Failed to load');
+        console.error('[SchoolEditDetails] Error fetching school data:', e);
+        console.error('[SchoolEditDetails] Error details:', {
+          message: e?.message,
+          response: e?.response?.data,
+          status: e?.response?.status
+        });
+        setError(e?.response?.data?.message || e?.message || 'Failed to load school data');
       } finally {
         setLoading(false);
+        console.log('[SchoolEditDetails] Fetch complete, loading set to false');
       }
     };
     fetch();
@@ -152,14 +177,15 @@ const SchoolEditDetails: React.FC = () => {
   if (!profile) {
     return (
       <div className="p-6">
-        <div className="flex items-center space-x-4 mb-6">
-          <button onClick={() => setCurrentView('school-details')} className="flex items-center space-x-2 text-gray-600 hover:text-gray-900">
-            <ArrowLeft className="h-5 w-5" />
-            <span>Back to Details</span>
-          </button>
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Edit School</h1>
         </div>
-        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded p-4">No data</div>
+        <div className="bg-yellow-50 border border-yellow-200 text-yellow-800 rounded p-4 mb-4">
+          <p className="font-semibold mb-2">No school data loaded</p>
+          <p className="text-sm">Selected School ID: {selectedSchoolId || 'None'}</p>
+          <p className="text-sm mt-2">Error: {error || 'No error message'}</p>
+          <p className="text-sm mt-2">Check the browser console for more details.</p>
+        </div>
       </div>
     );
   }

@@ -154,23 +154,29 @@ export function AppProvider({ children }: { children: ReactNode }) {
           }));
         }
         
-        // Get last login time from auth context
-        const authData = localStorage.getItem('erp.auth');
+        // Get last login time from auth context (check both storages)
+        const authData = localStorage.getItem('erp.auth') || sessionStorage.getItem('erp.auth');
         if (authData) {
           try {
             const parsed = JSON.parse(authData);
             const lastLogin = parsed.user?.lastLogin;
+            console.log('[AppContext] Last login from auth:', lastLogin);
             if (lastLogin) {
               const loginDate = new Date(lastLogin);
               const formattedTime = loginDate.toLocaleString();
+              console.log('[AppContext] Formatted last login:', formattedTime);
               setStats(prev => ({
                 ...prev,
                 lastLogin: formattedTime,
               }));
+            } else {
+              console.log('[AppContext] No lastLogin found in auth data');
             }
           } catch (authError) {
-            console.error('Error parsing auth data:', authError);
+            console.error('[AppContext] Error parsing auth data:', authError);
           }
+        } else {
+          console.log('[AppContext] No auth data found in storage');
         }
         
       } catch (err: any) {

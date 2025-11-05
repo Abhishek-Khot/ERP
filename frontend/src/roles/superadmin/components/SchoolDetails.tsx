@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Users, GraduationCap, Settings, BarChart3, Calendar, BookOpen, Award, TrendingUp, Edit, Save, X, Plus, Trash2, Eye, EyeOff, RefreshCw, Key, Upload } from 'lucide-react'; // Added Upload icon
+import { ArrowLeft, Users, GraduationCap, Settings, BarChart3, Calendar, BookOpen, Award, TrendingUp, Edit, Save, X, Plus, Trash2, Eye, EyeOff, RefreshCw, Key, Upload, School } from 'lucide-react';
 import { useApp } from '../context/AppContext';
 import api from '../../../api/axios';
 import { schoolUserAPI } from '../../../api/schoolUsers';
@@ -121,18 +121,29 @@ function SchoolDetailsContent() {
   // Helper function to get token consistently
   const getAuthToken = (): string | null => {
     let token;
-    const auth = localStorage.getItem('erp.auth');
+    // Check both localStorage and sessionStorage for erp.auth
+    const auth = localStorage.getItem('erp.auth') || sessionStorage.getItem('erp.auth');
     if (auth) {
       try {
         const parsed = JSON.parse(auth);
         token = parsed.token;
+        console.log('[SchoolDetails] Token found in erp.auth:', token ? token.substring(0, 20) + '...' : 'null');
       } catch (e) {
-        console.log('Failed to parse erp.auth:', e);
+        console.log('[SchoolDetails] Failed to parse erp.auth:', e);
       }
     }
-    // Fallback to direct token storage
+    // Fallback to direct token storage (check both storages)
     if (!token) {
-      token = localStorage.getItem('token');
+      token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      console.log('[SchoolDetails] Token found in direct storage:', token ? token.substring(0, 20) + '...' : 'null');
+    }
+    // Additional fallback for authToken
+    if (!token) {
+      token = localStorage.getItem('authToken') || sessionStorage.getItem('authToken');
+      console.log('[SchoolDetails] Token found in authToken:', token ? token.substring(0, 20) + '...' : 'null');
+    }
+    if (!token) {
+      console.error('[SchoolDetails] No authentication token found in any storage');
     }
     return token;
   };
@@ -657,12 +668,6 @@ function SchoolDetailsContent() {
         <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg">
           <p>No school selected. Please go back and select a school.</p>
         </div>
-        <button
-          onClick={() => setCurrentView('dashboard')}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
-        >
-          Back to Dashboard
-        </button>
       </div>
     );
   }
@@ -676,12 +681,6 @@ function SchoolDetailsContent() {
           <p>School not found. The school ID may be invalid.</p>
           <p className="text-sm mt-2">ID: {selectedSchoolId}</p>
         </div>
-        <button
-          onClick={() => setCurrentView('dashboard')}
-          className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg"
-        >
-          Back to Dashboard
-        </button>
       </div>
     );
   }
@@ -690,15 +689,8 @@ function SchoolDetailsContent() {
   if (loading) {
     return (
       <div className="p-6">
-        <div className="flex items-center mb-6">
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span>Back to Dashboard</span>
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900 ml-4">School Details - {school.name}</h1>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">School Details - {school.name}</h1>
         </div>
         <div className="flex items-center space-x-3">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
@@ -712,15 +704,8 @@ function SchoolDetailsContent() {
   if (error) {
     return (
       <div className="p-6">
-        <div className="flex items-center mb-6">
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span>Back to Dashboard</span>
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900 ml-4">School Details - {school.name}</h1>
+        <div className="mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">School Details - {school.name}</h1>
         </div>
         <div className="bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 mb-4">
           <h3 className="font-medium">Error loading school details</h3>
@@ -738,17 +723,12 @@ function SchoolDetailsContent() {
 
   // Case 5: Success - basic view
   return (
-    <div className="p-6">
-      <div className="flex items-center mb-6">
-        <button
-          onClick={() => setCurrentView('dashboard')}
-          className="flex items-center space-x-2 text-gray-600 hover:text-gray-900"
-        >
-          <ArrowLeft className="h-5 w-5" />
-          <span>Back to Dashboard</span>
-        </button>
-        <h1 className="text-2xl font-bold text-gray-900 ml-4">School Details - {school.name}</h1>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
+      <div className="max-w-7xl mx-auto">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">{school.name}</h1>
+          <p className="text-sm text-gray-600 mt-1">School Code: {schoolCode || 'N/A'}</p>
+        </div>
 
       {/* DEBUG Panel - visible to help diagnose issues */}
       <div className="bg-blue-50 border border-blue-200 p-4 rounded-lg mb-6">
@@ -768,123 +748,76 @@ function SchoolDetailsContent() {
       </div>
 
       {/* Tabs Navigation */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm mb-6 p-2">
+        <nav className="flex space-x-2">
           <button
-            className={`pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'overview'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+            className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${
+              activeTab === 'overview'
+                ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
             onClick={() => setActiveTab('overview')}
           >
-            <span className="flex items-center">
-              <BarChart3 className="mr-2 h-4 w-4" />
-              Overview
-            </span>
+            <BarChart3 className="h-4 w-4" />
+            <span>Overview</span>
           </button>
 
           <button
-            className={`pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'users'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+            className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${
+              activeTab === 'users'
+                ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-md'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
             onClick={() => setActiveTab('users')}
           >
-            <span className="flex items-center">
-              <Users className="mr-2 h-4 w-4" />
-              Users
-            </span>
+            <Users className="h-4 w-4" />
+            <span>Users</span>
           </button>
 
-
           <button
-            className={`pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'academics'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
+            className={`flex-1 flex items-center justify-center space-x-2 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 ${
+              activeTab === 'academics'
+                ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-md'
+                : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+            }`}
             onClick={() => setActiveTab('academics')}
           >
-            <span className="flex items-center">
-              <GraduationCap className="mr-2 h-4 w-4" />
-              Academics
-            </span>
-          </button>
-
-          <button
-            className={`pb-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'settings'
-              ? 'border-blue-500 text-blue-600'
-              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            onClick={() => setActiveTab('settings')}
-          >
-            <span className="flex items-center">
-              <Settings className="mr-2 h-4 w-4" />
-              Settings
-            </span>
+            <GraduationCap className="h-4 w-4" />
+            <span>Academics</span>
           </button>
         </nav>
       </div>
 
       {/* Tab Content */}
       {activeTab === 'overview' && (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* School Info Card */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-4">School Information</h2>
-            <div className="space-y-4">
-              <div>
-                <h3 className="font-medium text-gray-700 mb-2">Basic Info</h3>
-                <p><span className="font-medium">Name:</span> {school.name}</p>
-                <p><span className="font-medium">ID:</span> {school.id}</p>
-                <p><span className="font-medium">Code:</span> {schoolCode || 'N/A'}</p>
-                <p><span className="font-medium">Contact:</span> {schoolData?.settings?.schoolName || 'N/A'}</p>
+        <div className="grid grid-cols-1 gap-6">
+          {/* School Info Card - Expanded */}
+          <div className="bg-white p-8 rounded-2xl shadow-lg border border-gray-200 hover:shadow-xl transition-shadow duration-300">
+            <div className="flex items-center space-x-3 mb-6">
+              <div className="bg-gradient-to-br from-blue-500 to-blue-600 p-3 rounded-xl">
+                <School className="h-6 w-6 text-white" />
               </div>
-
-              <div>
-                <h3 className="font-medium text-gray-700 mb-2">User Counts</h3>
-                <p><span className="font-medium">Total Users:</span> {schoolData?.users?.length || 0}</p>
-                <p><span className="font-medium">Admin Users:</span> {schoolData?.users?.filter((u: any) => u.role === 'admin').length || 0}</p>
-                <p><span className="font-medium">Teachers:</span> {schoolData?.users?.filter((u: any) => u.role === 'teacher').length || 0}</p>
-                <p><span className="font-medium">Students:</span> {schoolData?.users?.filter((u: any) => u.role === 'student').length || 0}</p>
-              </div>
+              <h2 className="text-2xl font-bold text-gray-900">School Information</h2>
             </div>
-          </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div>
+                <h3 className="font-semibold text-gray-800 mb-4 text-lg">Basic Info</h3>
+                <div className="space-y-3">
+                  <p className="text-gray-700"><span className="font-medium">Name:</span> {school.name}</p>
+                  <p className="text-gray-700"><span className="font-medium">Code:</span> {schoolCode || 'N/A'}</p>
+                  <p className="text-gray-700"><span className="font-medium">Contact:</span> {schoolData?.settings?.schoolName || 'N/A'}</p>
+                </div>
+              </div>
 
-          {/* Quick Actions Card */}
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            <h2 className="text-xl font-bold mb-4">Quick Actions</h2>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                onClick={() => setActiveTab('users')}
-                className="flex flex-col items-center justify-center p-4 bg-blue-50 rounded-lg hover:bg-blue-100"
-              >
-                <Users className="h-8 w-8 text-blue-600 mb-2" />
-                <span className="text-blue-800 font-medium">Manage Users</span>
-              </button>
-
-              <button
-                onClick={() => setActiveTab('settings')}
-                className="flex flex-col items-center justify-center p-4 bg-emerald-50 rounded-lg hover:bg-emerald-100"
-              >
-                <Settings className="h-8 w-8 text-emerald-600 mb-2" />
-                <span className="text-emerald-800 font-medium">School Settings</span>
-              </button>
-
-              <button
-                onClick={() => setCurrentView('school-login')}
-                className="flex flex-col items-center justify-center p-4 bg-purple-50 rounded-lg hover:bg-purple-100"
-              >
-                <Key className="h-8 w-8 text-purple-600 mb-2" />
-                <span className="text-purple-800 font-medium">Test Login</span>
-              </button>
-
-              <button
-                onClick={() => setReloadKey(prev => prev + 1)}
-                className="flex flex-col items-center justify-center p-4 bg-gray-50 rounded-lg hover:bg-gray-100"
-              >
-                <RefreshCw className="h-8 w-8 text-gray-600 mb-2" />
-                <span className="text-gray-800 font-medium">Refresh Data</span>
-              </button>
+              <div>
+                <h3 className="font-semibold text-gray-800 mb-4 text-lg">User Counts</h3>
+                <div className="space-y-3">
+                  <p className="text-gray-700"><span className="font-medium">Total Users:</span> {schoolData?.users?.length || 0}</p>
+                  <p className="text-gray-700"><span className="font-medium">Admin Users:</span> {schoolData?.users?.filter((u: User) => u.role === 'admin').length || 0}</p>
+                  <p className="text-gray-700"><span className="font-medium">Teachers:</span> {schoolData?.users?.filter((u: User) => u.role === 'teacher').length || 0}</p>
+                  <p className="text-gray-700"><span className="font-medium">Students:</span> {schoolData?.users?.filter((u: User) => u.role === 'student').length || 0}</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -895,13 +828,6 @@ function SchoolDetailsContent() {
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold">Users Management</h2>
             <div className="flex space-x-2">
-              <button
-                onClick={() => setShowImportDialog(true)}
-                className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700"
-              >
-                <Upload className="h-4 w-4" />
-                <span>Import Users</span>
-              </button>
               <button
                 onClick={() => setShowAddUserModal(true)}
                 className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700"
@@ -933,44 +859,25 @@ function SchoolDetailsContent() {
 
           {!loading && !error && schoolData && (
             <>
-              {/* Search and Filter */}
-              <div className="mb-6 flex flex-col md:flex-row gap-4">
-                <div className="flex-1">
-                  <label htmlFor="searchUsers" className="block text-sm font-medium text-gray-700 mb-1">
-                    Search Users
-                  </label>
-                  <div className="relative">
-                    <input
-                      id="searchUsers"
-                      type="text"
-                      placeholder="Search by name or email..."
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                      </svg>
-                    </div>
+              {/* Search */}
+              <div className="mb-6">
+                <label htmlFor="searchUsers" className="block text-sm font-medium text-gray-700 mb-1">
+                  Search Users
+                </label>
+                <div className="relative">
+                  <input
+                    id="searchUsers"
+                    type="text"
+                    placeholder="Search by name or email..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full px-3 py-2 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
                   </div>
-                </div>
-
-                <div className="md:w-64">
-                  <label htmlFor="roleFilter" className="block text-sm font-medium text-gray-700 mb-1">
-                    Filter by Role
-                  </label>
-                  <select
-                    id="roleFilter"
-                    value={roleFilter}
-                    onChange={(e) => setRoleFilter(e.target.value as UserRole | 'all')}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="all">All Roles</option>
-                    <option value="admin">Admin</option>
-                    <option value="teacher">Teacher</option>
-                    <option value="student">Student</option>
-                  </select>
                 </div>
               </div>
 
@@ -1018,11 +925,6 @@ function SchoolDetailsContent() {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {schoolData.users
                       .filter(user => {
-                        // Apply role filter
-                        if (roleFilter !== 'all' && user.role !== roleFilter) {
-                          return false;
-                        }
-
                         // Apply search query
                         if (searchQuery) {
                           const query = searchQuery.toLowerCase();
@@ -1107,14 +1009,6 @@ function SchoolDetailsContent() {
                               Edit
                             </button>
                             <button
-                              className="text-green-600 hover:text-green-900 inline-flex items-center gap-1"
-                              onClick={() => handleResetPassword(user._id || '', user.userId || '')}
-                              title="Reset Password"
-                            >
-                              <Key size={16} />
-                              Reset
-                            </button>
-                            <button
                               className="text-red-600 hover:text-red-900 inline-flex items-center gap-1"
                               onClick={() => setDeletingUser(user._id)}
                               title="Delete User"
@@ -1128,9 +1022,6 @@ function SchoolDetailsContent() {
 
                     {/* No results message */}
                     {schoolData.users.filter(user => {
-                      if (roleFilter !== 'all' && user.role !== roleFilter) {
-                        return false;
-                      }
                       if (searchQuery) {
                         const query = searchQuery.toLowerCase();
                         return (
@@ -1151,19 +1042,14 @@ function SchoolDetailsContent() {
                               <p className="text-sm mt-1">
                                 {searchQuery
                                   ? `No users match the search "${searchQuery}"`
-                                  : roleFilter !== 'all'
-                                    ? `No users with role "${roleFilter}" found`
-                                    : 'There are no users to display'}
+                                  : 'There are no users to display'}
                               </p>
-                              {(searchQuery || roleFilter !== 'all') && (
+                              {searchQuery && (
                                 <button
-                                  onClick={() => {
-                                    setSearchQuery('');
-                                    setRoleFilter('all');
-                                  }}
+                                  onClick={() => setSearchQuery('')}
                                   className="mt-3 text-blue-600 hover:text-blue-800 text-sm font-medium"
                                 >
-                                  Clear filters
+                                  Clear search
                                 </button>
                               )}
                             </div>
@@ -1192,7 +1078,8 @@ function SchoolDetailsContent() {
         </div>
       )}
 
-      {activeTab === 'settings' && schoolData && (
+      {/* Settings tab removed - Super Admin view only */}
+      {false && activeTab === 'settings' && schoolData && (
         <div className="bg-white p-6 rounded-lg shadow-md">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold">School Settings</h2>
@@ -1444,16 +1331,13 @@ function SchoolDetailsContent() {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <select
-                    value={addUserForm.role}
-                    onChange={(e) => setAddUserForm({ ...addUserForm, role: e.target.value as UserRole })}
-                    required
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="admin">Admin</option>
-                    <option value="teacher">Teacher</option>
-                    <option value="student">Student</option>
-                  </select>
+                  <input
+                    type="text"
+                    value="Admin"
+                    readOnly
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 cursor-not-allowed"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Super Admin can only create Admin users</p>
                 </div>
 
                 <div>
@@ -1765,6 +1649,7 @@ function SchoolDetailsContent() {
         </div>
       )}
 
+      </div>
     </div>
   );
 }

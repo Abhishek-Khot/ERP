@@ -14,6 +14,7 @@ const { ObjectId } = require('mongodb');
 const SchoolDatabaseManager = require('../utils/databaseManager');
 const { generateSequentialUserId } = require('./userController');
 const sharp = require('sharp');
+const { uploadToCloudinary, deleteLocalFile } = require('../config/cloudinary');
 
 const parseCsv = promisify(csv.parse);
 
@@ -552,9 +553,11 @@ exports.generateTemplate = async (req, res) => {
 // HELPER FUNCTIONS
 // ==================================================================
 
-// --- Profile Picture Copy Helper with Compression ---
+// --- Profile Picture Upload Helper with Cloudinary ---
 async function copyProfilePicture(sourcePath, userId, schoolCode) {
   if (!sourcePath || String(sourcePath).trim() === '') return '';
+
+  let tempCompressedPath = null;
 
   try {
     // Normalize the source path
@@ -579,26 +582,26 @@ async function copyProfilePicture(sourcePath, userId, schoolCode) {
     const originalStats = fs.statSync(normalizedSourcePath);
     console.log(`📸 Original image: ${path.basename(normalizedSourcePath)}, Size: ${(originalStats.size / 1024).toFixed(2)}KB`);
 
-    // Create uploads directory structure: uploads/profiles/schoolCode/
-    const uploadsDir = path.join(__dirname, '..', 'uploads', 'profiles', schoolCode.toUpperCase());
-    if (!fs.existsSync(uploadsDir)) {
-      fs.mkdirSync(uploadsDir, { recursive: true });
+    // Create temp directory for compression
+    const tempDir = path.join(__dirname, '..', 'uploads', 'temp');
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
     }
 
     // Generate unique filename with .jpg extension (Sharp will convert to JPEG)
     const timestamp = Date.now();
     const filename = `${userId}_${timestamp}.jpg`;
-    const destPath = path.join(uploadsDir, filename);
+    tempCompressedPath = path.join(tempDir, filename);
 
     // Compress image using Sharp to ~30KB
     console.log('🔄 Compressing image with Sharp...');
     await sharp(normalizedSourcePath)
       .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
       .jpeg({ quality: 60 })
-      .toFile(destPath);
+      .toFile(tempCompressedPath);
 
     // Check file size and re-compress if needed
-    let stats = fs.statSync(destPath);
+    let stats = fs.statSync(tempCompressedPath);
     let quality = 60;
 
     while (stats.size > 30 * 1024 && quality > 20) {
@@ -607,28 +610,35 @@ async function copyProfilePicture(sourcePath, userId, schoolCode) {
       await sharp(normalizedSourcePath)
         .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
         .jpeg({ quality })
-        .toFile(destPath);
-      stats = fs.statSync(destPath);
+        .toFile(tempCompressedPath);
+      stats = fs.statSync(tempCompressedPath);
     }
 
     console.log(`✅ Compressed image: ${(stats.size / 1024).toFixed(2)}KB (quality: ${quality})`);
-    console.log(`✅ Profile picture processed: ${normalizedSourcePath} -> ${destPath}`);
 
-    // Delete source file after successful compression (to avoid accumulation in temp folder)
-    try {
-      // Check if source is in a temp directory before deleting
-      if (normalizedSourcePath.includes('temp') || normalizedSourcePath.includes('upload')) {
-        fs.unlinkSync(normalizedSourcePath);
-        console.log(`🗑️ Deleted source file: ${normalizedSourcePath}`);
-      }
-    } catch (deleteErr) {
-      console.warn(`⚠️ Could not delete source file ${normalizedSourcePath}:`, deleteErr.message);
+    // Upload to Cloudinary
+    const cloudinaryFolder = `profiles/${schoolCode.toUpperCase()}`;
+    const publicId = `${userId}_${timestamp}`;
+    const uploadResult = await uploadToCloudinary(tempCompressedPath, cloudinaryFolder, publicId);
+
+    // Delete source file after successful upload (to avoid accumulation in temp folder)
+    if (normalizedSourcePath.includes('temp') || normalizedSourcePath.includes('upload')) {
+      deleteLocalFile(normalizedSourcePath);
     }
 
-    // Return relative path for storage in database
-    return `/uploads/profiles/${schoolCode.toUpperCase()}/${filename}`;
+    // Delete compressed temp file
+    deleteLocalFile(tempCompressedPath);
+
+    // Return Cloudinary URL for storage in database
+    return uploadResult.secure_url;
   } catch (error) {
     console.error(`Error processing profile picture from ${sourcePath}:`, error.message);
+    
+    // Clean up temp file on error
+    if (tempCompressedPath) {
+      deleteLocalFile(tempCompressedPath);
+    }
+    
     return '';
   }
 }

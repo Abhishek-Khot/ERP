@@ -8,59 +8,59 @@ const checkPermission = require('../middleware/permissionCheck');
 router.use(authMiddleware.auth);
 
 // Create or update student result - requires viewResults permission
-router.post('/create', 
+router.post('/create',
   authMiddleware.authorize(['admin', 'teacher']),
   checkPermission('viewResults'),
   resultController.createOrUpdateResult
 );
 
 // Save results (simple endpoint for Results page) - requires viewResults permission
-router.post('/save', 
+router.post('/save',
   authMiddleware.authorize(['admin', 'teacher']),
   checkPermission('viewResults'),
   resultController.saveResults
 );
 
 // Get existing results for a class and section - requires viewResults permission
-router.get('/', 
+router.get('/',
   checkPermission('viewResults'),
   resultController.getResults
 );
 
 // Update a single student result - requires viewResults permission
-router.put('/:resultId', 
+router.put('/:resultId',
   authMiddleware.authorize(['admin', 'teacher']),
   checkPermission('viewResults'),
   resultController.updateResult
 );
 
 // Freeze results for a class/section/subject/test - requires viewResults permission
-router.post('/freeze', 
+router.post('/freeze',
   authMiddleware.authorize(['admin', 'teacher']),
   checkPermission('viewResults'),
   resultController.freezeResults
 );
 
 // Get student result history - requires viewResults permission
-router.get('/student/:studentId/history', 
+router.get('/student/:studentId/history',
   checkPermission('viewResults'),
   resultController.getStudentResultHistory
 );
 
 // Generate class performance report - requires viewResults permission
-router.get('/class/:grade/:section/report', 
+router.get('/class/:grade/:section/report',
   checkPermission('viewResults'),
   resultController.generateClassPerformanceReport
 );
 
 // Teacher-specific endpoint to view results
-router.get('/teacher/view', 
-  authMiddleware.auth, 
+router.get('/teacher/view',
+  authMiddleware.auth,
   resultController.getResultsForTeacher
 );
 
 // Get class performance statistics for dashboard - requires viewResults permission
-router.get('/class-performance-stats', 
+router.get('/class-performance-stats',
   checkPermission('viewResults'),
   resultController.getClassPerformanceStats
 );

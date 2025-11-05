@@ -21,9 +21,9 @@ router.use((req, res, next) => {
 });
 
 // Teacher-accessible routes (read-only, no permission check)
-router.get('/teacher/messages', 
+router.get('/teacher/messages',
   roleCheck(['teacher']),
-  messagesController.getMessages
+  messagesController.getTeacherMessages
 );
 
 // Apply role check - only ADMIN and SUPER_ADMIN can access below routes
@@ -31,32 +31,32 @@ router.use(roleCheck(['admin', 'superadmin']));
 
 // Admin Routes - permission check is applied per route
 // Superadmin and admin with messageStudentsParents permission can access
-router.post('/send', 
+router.post('/send',
   checkPermission('messageStudentsParents'),
   messagesController.sendMessage
 );
 
-router.post('/preview', 
+router.post('/preview',
   checkPermission('messageStudentsParents'),
   messagesController.previewMessage
 );
 
-router.get('/', 
+router.get('/',
   checkPermission('messageStudentsParents'),
   messagesController.getMessages
 );
 
-router.get('/stats', 
+router.get('/stats',
   checkPermission('messageStudentsParents'),
   messagesController.getMessageStats
 );
 
-router.get('/:messageId', 
+router.get('/:messageId',
   checkPermission('messageStudentsParents'),
   messagesController.getMessageDetails
 );
 
-router.delete('/:messageId', 
+router.delete('/:messageId',
   checkPermission('messageStudentsParents'),
   messagesController.deleteMessage
 );

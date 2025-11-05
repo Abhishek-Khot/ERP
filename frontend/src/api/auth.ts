@@ -38,7 +38,8 @@ async function regularLogin(payload: LoginPayload): Promise<LoginResponse> {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       email: payload.email,
-      password: payload.password
+      password: payload.password,
+      role: payload.role
     })
   });
   
@@ -105,7 +106,8 @@ async function schoolLogin(payload: LoginPayload): Promise<LoginResponse> {
     body: JSON.stringify({
       identifier: payload.email,
       password: payload.password,
-      schoolCode: payload.schoolCode
+      schoolCode: payload.schoolCode,
+      role: payload.role
     })
   });
   

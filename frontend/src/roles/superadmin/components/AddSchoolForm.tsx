@@ -334,14 +334,7 @@ export function AddSchoolForm() {
   return (
     <div className="p-6">
       <div className="max-w-4xl mx-auto">
-        <div className="flex items-center space-x-4 mb-6">
-          <button
-            onClick={() => setCurrentView('dashboard')}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-900 transition-colors duration-200"
-          >
-            <ArrowLeft className="h-5 w-5" />
-            <span>Back to Dashboard</span>
-          </button>
+        <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Add New School</h1>
         </div>
 

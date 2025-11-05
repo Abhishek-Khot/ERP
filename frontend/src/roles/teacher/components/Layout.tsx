@@ -75,9 +75,8 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate, onLo
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      } transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
+      <div className={`fixed inset-y-0 left-0 z-30 w-64 bg-white shadow-lg transform ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        } transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0`}>
         <div className="flex items-center justify-between h-16 px-4 border-b border-gray-200">
           <div className="flex items-center">
             <div className="flex items-center justify-center w-8 h-8 bg-blue-600 rounded-lg mr-3">
@@ -101,11 +100,10 @@ const Layout: React.FC<LayoutProps> = ({ children, currentPage, onNavigate, onLo
                 <button
                   key={item.name}
                   onClick={() => handleMenuClick(item)}
-                  className={`w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${
-                    currentPage === item.page
+                  className={`w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-colors ${currentPage === item.page
                       ? 'bg-blue-100 text-blue-700'
                       : 'text-gray-700 hover:bg-gray-100'
-                  }`}
+                    }`}
                 >
                   <Icon className="h-5 w-5 mr-3" />
                   {item.name}

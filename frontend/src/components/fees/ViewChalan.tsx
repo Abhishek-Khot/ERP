@@ -114,7 +114,7 @@ const useChalanNumber = (chalan: ChalanDetails) => {
     // Generate a simple chalan number with timestamp and random number
     const timestamp = new Date().getTime();
     const randomNum = Math.floor(Math.random() * 1000);
-    return `CHL-${timestamp}-${randomNum}`;
+    return `CRN-TEMP-${randomNum}`;
   }, []);
 
   useEffect(() => {
@@ -127,10 +127,10 @@ const useChalanNumber = (chalan: ChalanDetails) => {
       
       setIsLoading(true);
       try {
-        // Get the next chalan number from the server
-        const response = await feesAPI.getNextChalanNumber();
-        if (response && response.success && response.chalanNumber) {
-          setChalanNumber(response.chalanNumber);
+        // Get the next chalan number from the server using api
+        const response = await api.get('/chalans/next-chalan-number');
+        if (response?.data?.success && response?.data?.chalanNumber) {
+          setChalanNumber(response.data.chalanNumber);
           return;
         }
         
@@ -152,7 +152,7 @@ const useChalanNumber = (chalan: ChalanDetails) => {
     } else {
       fetchChalanNumber();
     }
-  }, [chalan.chalanNumber]);
+  }, [chalan.chalanNumber, generateChalanNumber]);
 
   return { chalanNumber, isLoading };
 };
@@ -166,24 +166,24 @@ const ChalanCopy: React.FC<ChalanCopyProps> = ({
   chalan: propChalan, 
   copyType
 }) => {
-  // Use the useChalanNumber hook to get the chalan number
-  const { chalanNumber, isLoading } = useChalanNumber(propChalan);
+  // Don't call the hook here - use the chalan number from props
+  // The parent component (ViewChalan) fetches it once for all copies
+  const chalan = propChalan;
+  const isLoading = false;
   
-  // Create a local copy of chalan with the updated chalan number
-  const chalan = {
-    ...propChalan,
-    chalanNumber: chalanNumber || propChalan.chalanNumber
-  };
 
-  // Debug: Log the chalan props
+  // Debug: Log the chalan props including bank details
   React.useEffect(() => {
-    console.log('Chalan props in ViewChalan:', {
-      hasSchoolLogo: !!chalan?.schoolLogo,
-      schoolLogo: chalan?.schoolLogo,
-      schoolCode: chalan?.schoolCode,
-      schoolName: chalan?.schoolName,
-      chalanNumber: chalan?.chalanNumber
-    });
+    console.group('Chalan props in ChalanCopy');
+    console.log('School Logo:', chalan?.schoolLogo);
+    console.log('School Code:', chalan?.schoolCode);
+    console.log('School Name:', chalan?.schoolName);
+    console.log('Chalan Number:', chalan?.chalanNumber);
+    console.log('Has Bank Details:', !!chalan?.bankDetails);
+    console.log('Bank Details:', JSON.stringify(chalan?.bankDetails, null, 2));
+    console.log('Has School Data Bank Details:', !!chalan?.schoolData?.bankDetails);
+    console.log('School Data Bank Details:', JSON.stringify(chalan?.schoolData?.bankDetails, null, 2));
+    console.groupEnd();
   }, [chalan]);
 
 
@@ -244,7 +244,7 @@ const ChalanCopy: React.FC<ChalanCopyProps> = ({
   }, []);
 
   return (
-    <div className="w-[90%] max-w-md mx-auto border border-gray-300 p-4 mb-4">
+    <div className="w-[90%] max-w-md mx-auto border-2 border-gray-400 p-4 mb-4">
       {/* School Header with Logo and Details */}
       <div className="mb-4 border-b border-gray-200 pb-3">
         <div className="flex items-center gap-4">
@@ -276,18 +276,10 @@ const ChalanCopy: React.FC<ChalanCopyProps> = ({
           <p className="text-sm font-bold uppercase tracking-wide">FEE PAYMENT CHALAN</p>
           <p className="text-xs text-gray-600 mt-1">Academic Year: 2024-25</p>
           <p className="text-xs font-semibold text-blue-600 mt-1">{copyType.toUpperCase()}</p>
-        </div>
-      </div>
-      
-      {/* Chalan and Date Section */}
-      <div className="mt-2 px-4 text-xs">
-        <div className="flex justify-between items-center py-1">
-          <p className="text-xs">Chalan: <span className="font-mono font-medium">
-            {isLoading ? 'Loading...' : chalan.chalanNumber || 'N/A'}
-          </span></p>
-          <p className="text-xs">Date: <span className="font-medium">
-            {chalan.chalanDate ? formatDate(chalan.chalanDate) : formatDate(new Date().toISOString())}
-          </span></p>
+          {/* Chalan Number - Horizontal like print version */}
+          <p className="text-sm font-semibold text-gray-700 mt-2">
+            Chalan: {isLoading ? 'Loading...' : chalan.chalanNumber || 'N/A'}
+          </p>
         </div>
       </div>
       
@@ -314,11 +306,19 @@ const ChalanCopy: React.FC<ChalanCopyProps> = ({
               <span className="w-28 text-xs text-gray-600 font-medium">Student ID:</span>
               <div className="flex-1">
                 <span className="text-sm font-mono text-gray-800">
-                  {chalan.userId || 
-                   chalan.admissionNumber ||
-                   (chalan.studentId?.startsWith('KVS-') ? chalan.studentId : 
-                    chalan.studentId?.match(/^[0-9a-fA-F]{24}$/) ? 'N/A' : 
-                    chalan.studentId || 'N/A')}
+                  {(() => {
+                    console.log('[ViewChalan Preview] Student ID values:', {
+                      userId: chalan.userId,
+                      admissionNumber: chalan.admissionNumber,
+                      studentId: chalan.studentId,
+                      mongoId: chalan.mongoId
+                    });
+                    return chalan.userId || 
+                           chalan.admissionNumber ||
+                           (chalan.studentId?.startsWith('KVS-') ? chalan.studentId : 
+                            chalan.studentId?.match(/^[0-9a-fA-F]{24}$/) ? 'N/A' : 
+                            chalan.studentId || 'N/A');
+                  })()}
                 </span>
               </div>
             </div>
@@ -372,7 +372,7 @@ const ChalanCopy: React.FC<ChalanCopyProps> = ({
               <p className="text-sm text-gray-900">
                 {chalan.schoolData?.bankDetails?.bankName || 
                  chalan.bankDetails?.bankName || 
-                 'SBI'}
+                 'Not Available'}
               </p>
             </div>
             <div className="flex items-center">
@@ -380,9 +380,7 @@ const ChalanCopy: React.FC<ChalanCopyProps> = ({
               <p className="text-sm font-medium text-gray-800">
                 {chalan.schoolData?.bankDetails?.accountHolderName || 
                  chalan.bankDetails?.accountHolderName ||
-                 chalan.schoolData?.bankDetails?.accountName ||
-                 chalan.bankDetails?.accountName ||
-                 'SONU'}
+                 'Not Available'}
               </p>
             </div>
             <div className="flex items-center">
@@ -390,7 +388,7 @@ const ChalanCopy: React.FC<ChalanCopyProps> = ({
               <p className="text-sm font-mono text-gray-900">
                 {chalan.schoolData?.bankDetails?.accountNumber || 
                  chalan.bankDetails?.accountNumber || 
-                 '1586324862485631'}
+                 'Not Available'}
               </p>
             </div>
             <div className="flex items-center">
@@ -398,7 +396,7 @@ const ChalanCopy: React.FC<ChalanCopyProps> = ({
               <p className="text-sm font-mono text-gray-900">
                 {chalan.schoolData?.bankDetails?.ifscCode || 
                  chalan.bankDetails?.ifscCode || 
-                 'SBIN0569842'}
+                 'Not Available'}
               </p>
             </div>
             <div className="flex items-center">
@@ -406,7 +404,7 @@ const ChalanCopy: React.FC<ChalanCopyProps> = ({
               <p className="text-sm text-gray-900">
                 {chalan.schoolData?.bankDetails?.branch || 
                  chalan.bankDetails?.branch || 
-                 'UGAR'}
+                 'Not Available'}
               </p>
             </div>
           </div>
@@ -451,10 +449,10 @@ const formatAddress = (address: string | Address | undefined): string => {
   return String(address);
 };
 
-const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initialChalan, onSave }) => {
+const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initialChalan }) => {
   const { user } = useAuth();
   const [chalan, setChalan] = useState<ChalanDetails>(() => ({
-    chalanNumber: '',
+    chalanNumber: initialChalan?.chalanNumber || '',
     chalanDate: '',
     chalanStatus: 'generated',
     installmentName: '',
@@ -497,15 +495,37 @@ const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initia
     }
   }, [initialChalan]);
 
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [chalanNumber, setChalanNumber] = useState('');
+  
+  // Use the hook at parent level to fetch chalan number once for all copies
+  // Use chalan state instead of initialChalan to ensure it has all the data
+  const { chalanNumber: fetchedChalanNumber, isLoading: chalanNumberLoading } = useChalanNumber(chalan);
+  
+  // Debug log for fetched chalan number
+  useEffect(() => {
+    console.log('[ViewChalan] Fetched chalan number:', fetchedChalanNumber);
+  }, [fetchedChalanNumber]);
+  
+  // Sync chalan number when it's fetched
+  useEffect(() => {
+    if (fetchedChalanNumber && isOpen) {
+      setChalan(prev => {
+        // Only update the chalan number, preserve everything else including bank details
+        const updatedChalan = {
+          ...prev,
+          chalanNumber: fetchedChalanNumber
+        };
+        console.log('[ViewChalan] Updating chalan number:', fetchedChalanNumber);
+        return updatedChalan;
+      });
+    }
+  }, [fetchedChalanNumber, isOpen]);
   
   // Debug: Log the entire chalan data when it changes
   useEffect(() => {
     console.log('Chalan data updated:', {
       hasUserId: !!chalan.userId,
       hasStudentId: !!chalan.studentId,
+      chalanNumber: chalan.chalanNumber,
       rawChalan: chalan
     });
   }, [chalan]);
@@ -620,22 +640,51 @@ const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initia
 
   const [loading, setLoading] = useState(true);
   
-  // Fetch school data when component mounts or initialChalan changes
+  // Fetch school data when component opens
   useEffect(() => {
     const fetchSchoolData = async () => {
-      if (!initialChalan) return;
+      if (!initialChalan || !isOpen) return;
       
       try {
         setLoading(true);
         let updatedChalan = { ...initialChalan };
         
-        // Fetch school data from the same API as UniversalTemplate
-        const schoolIdentifier = user?.schoolId || user?.schoolCode;
-        if (schoolIdentifier) {
-          const response = await api.get(`/schools/${schoolIdentifier}/info`);
-          const schoolData = response?.data?.data || response?.data;
-          
-          if (schoolData) {
+        console.log('[ViewChalan] Initial chalan received:', {
+          studentId: initialChalan.studentId,
+          userId: initialChalan.userId,
+          studentName: initialChalan.studentName,
+          hasBankDetails: !!initialChalan.bankDetails,
+          bankDetails: JSON.stringify(initialChalan.bankDetails, null, 2),
+          hasSchoolData: !!initialChalan.schoolData,
+          schoolDataBankDetails: JSON.stringify(initialChalan.schoolData?.bankDetails, null, 2),
+          allKeys: Object.keys(initialChalan)
+        });
+        
+        console.log('[ViewChalan] Starting to fetch school data...');
+        
+        // Fetch school data from school's dedicated database (where bank details are stored)
+        // Use /schools/database/school-info instead of /schools/:id/info
+        // This fetches from school_info collection in the school's database
+        const response = await api.get('/schools/database/school-info');
+        
+        console.log('[ViewChalan] API Response:', response);
+        console.log('[ViewChalan] Response data structure:', {
+          hasData: !!response?.data,
+          hasDataData: !!response?.data?.data,
+          dataKeys: response?.data ? Object.keys(response.data) : [],
+          dataDataKeys: response?.data?.data ? Object.keys(response.data.data) : []
+        });
+        
+        const schoolData = response?.data?.data || response?.data;
+        
+        console.log('[ViewChalan] Fetched school data:', {
+          hasData: !!schoolData,
+          hasBankDetails: !!schoolData?.bankDetails,
+          bankDetails: JSON.stringify(schoolData?.bankDetails, null, 2),
+          schoolDataKeys: schoolData ? Object.keys(schoolData) : []
+        });
+        
+        if (schoolData) {
             // Format the logo URL
             let logoUrl = '';
             if (schoolData.logoUrl || schoolData.logo) {
@@ -656,19 +705,27 @@ const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initia
               });
             }
             
-            // Update chalan with school data
+            // Update chalan with school data including bank details
+            // Preserve existing schoolName from chalan if available, otherwise use fetched data
             updatedChalan = {
               ...updatedChalan,
-              schoolName: schoolData.name || schoolData.schoolName || updatedChalan.schoolName || 'School Name',
-              schoolCode: schoolData.code || schoolData.schoolCode || updatedChalan.schoolCode || 'SCH001',
+              schoolName: updatedChalan.schoolName || schoolData.name || schoolData.schoolName || 'School Name',
+              schoolCode: updatedChalan.schoolCode || schoolData.code || schoolData.schoolCode || 'SCH001',
               schoolAddress: formatAddress(schoolData.address) || updatedChalan.schoolAddress,
               schoolEmail: schoolData.contact?.email || schoolData.email || updatedChalan.schoolEmail,
               schoolPhone: schoolData.contact?.phone || schoolData.phone || updatedChalan.schoolPhone,
               schoolLogo: logoUrl || updatedChalan.schoolLogo,
+              bankDetails: schoolData.bankDetails, // Use freshly fetched bank details
               schoolData // Store the complete school data for reference
             };
+            
+            // Log bank details for debugging
+            console.log('Bank details after fetch:', {
+              fromSchoolData: schoolData.bankDetails,
+              inUpdatedChalan: updatedChalan.bankDetails,
+              hasData: !!updatedChalan.bankDetails?.bankName
+            });
           }
-        }
         
         // Ensure we don't show MongoDB _id as student ID
         if (updatedChalan.studentId && 
@@ -677,58 +734,30 @@ const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initia
           updatedChalan.studentId = 'N/A';
         }
         
+        console.log('[ViewChalan] About to set chalan with bank details:', {
+          hasBankDetails: !!updatedChalan.bankDetails,
+          bankDetailsPreview: updatedChalan.bankDetails,
+          hasSchoolData: !!updatedChalan.schoolData
+        });
         setChalan(updatedChalan);
       } catch (error) {
         console.error('Error fetching school data:', error);
-        // If there's an error, use the initial chalan data
-        setChalan(initialChalan);
+        // If there's an error, use the initial chalan data with fallback values
+        setChalan({
+          ...initialChalan,
+          schoolName: initialChalan.schoolName || 'School Name',
+          schoolCode: initialChalan.schoolCode || 'SCH001'
+        });
       } finally {
         setLoading(false);
       }
     };
     
-    if (isOpen) {
-      fetchSchoolData();
-    }
-  }, [isOpen, initialChalan, user]);
+    fetchSchoolData();
+  }, [isOpen]);
   
   if (!isOpen || !chalan || loading) return null;
 
-  const handleSave = async () => {
-    if (!chalan) return;
-    
-    setIsLoading(true);
-    try {
-      // Check if this is a new chalan or an update
-      if (initialChalan._id) {
-        // Update existing chalan
-        const updatedChalan = await chalanAPI.updateChalan(initialChalan._id, {
-          ...chalan,
-          chalanNumber: chalanNumber || chalan.chalanNumber
-        });
-        onSave?.(updatedChalan);
-      } else {
-        // Create new chalan using v2 API
-        const newChalan = await chalanAPI.generateChalansV2({
-          studentIds: [chalan.studentId],
-          amount: chalan.amount,
-          dueDate: chalan.dueDate,
-          installmentName: chalan.installmentName,
-          class: chalan.className,
-          section: chalan.section,
-          academicYear: chalan.academicYear,
-          chalanNumber: chalanNumber
-        });
-        onSave?.(newChalan);
-      }
-      onClose();
-    } catch (err) {
-      setError('Failed to save chalan');
-      console.error('Error saving chalan:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handlePrint = () => {
     // Format dates
@@ -749,28 +778,34 @@ const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initia
     const schoolPhone = chalan?.schoolData?.phone || chalan?.schoolData?.contact?.phone || chalan?.schoolPhone || '';
     const schoolEmail = chalan?.schoolData?.email || chalan?.schoolData?.contact?.email || chalan?.schoolEmail || '';
     const academicYear = chalan?.academicYear || new Date().getFullYear() + '-' + (new Date().getFullYear() + 1);
-    const chalanNumber = chalan?.chalanNumber || 'N/A';
+    // Use chalan number from chalan object (already fetched by ChalanCopy component)
+    const chalanNumber = chalan?.chalanNumber || initialChalan?.chalanNumber || 'N/A';
+    console.log('[Print] Using chalan number:', chalanNumber);
     const studentName = chalan?.studentName || 'N/A';
-    const studentId = chalan?.studentId || chalan?.admissionNumber || 'N/A';
+    // Use userId (user-friendly ID like KVS-S-0003) if available, otherwise fall back to other IDs
+    const studentId = chalan?.userId || 
+                      chalan?.admissionNumber || 
+                      (chalan?.studentId?.startsWith('KVS-') ? chalan.studentId : 
+                       chalan?.studentId?.match(/^[0-9a-fA-F]{24}$/) ? 'N/A' : 
+                       chalan?.studentId || 'N/A');
     const classSection = `${chalan?.className || ''}${chalan?.section ? '-' + chalan.section : ''}`;
     const installmentName = chalan?.installmentName || 'N/A';
     const amount = chalan?.amount ? `₹${chalan.amount.toLocaleString('en-IN')}` : '₹0';
     const paymentStatus = (chalan?.status || chalan?.chalanStatus || 'Status').toUpperCase();
     
-    // Use the same logic as the view for bank details
-    let bankDetails: BankDetails = chalan?.bankDetails && chalan.bankDetails.bankName ? chalan.bankDetails : (chalan?.schoolData?.bankDetails && chalan.schoolData.bankDetails.bankName ? chalan.schoolData.bankDetails : {
-      bankName: '',
-      accountNumber: '',
-      ifscCode: '',
-      branch: '',
-      accountHolderName: schoolName || 'School Account'
+    // Use bank details from schoolData (fetched) or fallback to chalan.bankDetails (passed from parent)
+    console.log('[Print] Bank details check:', {
+      hasSchoolDataBankDetails: !!chalan?.schoolData?.bankDetails,
+      hasChalanBankDetails: !!chalan?.bankDetails,
+      schoolDataBankDetails: chalan?.schoolData?.bankDetails,
+      chalanBankDetails: chalan?.bankDetails
     });
-    console.log('Bank details used for print:', bankDetails);
-  const accountHolder = bankDetails.accountHolderName || chalan.schoolData?.bankDetails?.accountName || chalan.bankDetails?.accountName || 'SONU';
-  const bankName = bankDetails.bankName || 'SBI';
-  const accountNumber = bankDetails.accountNumber || '1586324862485631';
-  const ifscCode = bankDetails.ifscCode || 'SBIN0569842';
-  const branch = bankDetails.branch || 'UGAR';
+    
+    const accountHolder = chalan?.schoolData?.bankDetails?.accountHolderName || chalan?.bankDetails?.accountHolderName || 'Not Available';
+    const bankName = chalan?.schoolData?.bankDetails?.bankName || chalan?.bankDetails?.bankName || 'Not Available';
+    const accountNumber = chalan?.schoolData?.bankDetails?.accountNumber || chalan?.bankDetails?.accountNumber || 'Not Available';
+    const ifscCode = chalan?.schoolData?.bankDetails?.ifscCode || chalan?.bankDetails?.ifscCode || 'Not Available';
+    const branch = chalan?.schoolData?.bankDetails?.branch || chalan?.bankDetails?.branch || 'Not Available';
 
     // Get the logo URL using the same logic as in the component
     const getLogoUrl = (logoPath?: string): string => {
@@ -807,6 +842,7 @@ const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initia
           .student-copy .copy-type { background: #3498db; }
           .office-copy .copy-type { background: #e74c3c; }
           .admin-copy .copy-type { background: #27ae60; }
+          .challan-number { font-weight: 600; font-size: 14px; color: #555; text-align: left; margin-top: 6px; padding-left: 4px; }
           .header { margin-bottom: 8px; }
           @page { size: A4 portrait; margin: 0; }
           body { font-family: Arial, sans-serif; background-color: white; margin: 0; padding: 0; }
@@ -840,6 +876,7 @@ const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initia
                 <div class=\"challan-title\">FEE PAYMENT CHALAN</div>
                 <div class=\"academic-year\">Academic Year: ${academicYear}</div>
                 <span class=\"copy-type\">STUDENT COPY</span>
+                <div class=\"challan-number\">Chalan: ${chalanNumber}</div>
               </div>
             </div>
         
@@ -884,6 +921,7 @@ const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initia
                 <div class=\"challan-title\">FEE PAYMENT CHALAN</div>
                 <div class=\"academic-year\">Academic Year: ${academicYear}</div>
                 <span class=\"copy-type\">OFFICE COPY</span>
+                <div class=\"challan-number\">Chalan: ${chalanNumber}</div>
               </div>
             </div>
          
@@ -928,6 +966,7 @@ const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initia
                 <div class=\"challan-title\">FEE PAYMENT CHALAN</div>
                 <div class=\"academic-year\">Academic Year: ${academicYear}</div>
                 <span class=\"copy-type\">ADMIN COPY</span>
+                <div class=\"challan-number\">Chalan: ${chalanNumber}</div>
               </div>
             </div>
            
@@ -966,6 +1005,14 @@ const ViewChalan: React.FC<ViewChalanProps> = ({ isOpen, onClose, chalan: initia
     if (printWindow) {
       printWindow.document.write(printContent);
       printWindow.document.close();
+      
+      // Wait for content to load, then trigger print dialog
+      printWindow.onload = () => {
+        setTimeout(() => {
+          printWindow.focus();
+          printWindow.print();
+        }, 250);
+      };
     } else {
       alert('Please allow popups to print the challan');
     }

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, PieChart, Pie, Cell } from 'recharts';
-import { Users, UserCheck, BookOpen, TrendingUp, Calendar, Clock, AlertCircle, Building, Phone, Mail, MapPin, RefreshCw, Bug, LogOut } from 'lucide-react';
+import { Users, UserCheck, BookOpen, TrendingUp, Calendar, Clock, AlertCircle, Building, Phone, Mail, MapPin, RefreshCw, Bug } from 'lucide-react';
 import { schoolAPI } from '../../../services/api';
 import { schoolUserAPI } from '../../../api/schoolUsers';
 import api from '../../../services/api';
@@ -105,11 +105,11 @@ const Dashboard: React.FC = () => {
   const [debugInfo, setDebugInfo] = useState<any>(null);
   const [showDebug, setShowDebug] = useState(false);
   const [attendanceRate, setAttendanceRate] = useState<string>('0.0%');
-  const [dailyAttendance, setDailyAttendance] = useState<Array<{name: string, attendance: number}>>([]);
-  const [todayAttendance, setTodayAttendance] = useState<{present: number, absent: number}>({present: 0, absent: 0});
-  const [morningAttendance, setMorningAttendance] = useState<{present: number, absent: number}>({present: 0, absent: 0});
-  const [afternoonAttendance, setAfternoonAttendance] = useState<{present: number, absent: number}>({present: 0, absent: 0});
-  const [classPerformance, setClassPerformance] = useState<Array<{name: string, percentage: number, studentCount: number}>>([]);
+  const [dailyAttendance, setDailyAttendance] = useState<Array<{ name: string, attendance: number }>>([]);
+  const [todayAttendance, setTodayAttendance] = useState<{ present: number, absent: number }>({ present: 0, absent: 0 });
+  const [morningAttendance, setMorningAttendance] = useState<{ present: number, absent: number }>({ present: 0, absent: 0 });
+  const [afternoonAttendance, setAfternoonAttendance] = useState<{ present: number, absent: number }>({ present: 0, absent: 0 });
+  const [classPerformance, setClassPerformance] = useState<Array<{ name: string, percentage: number, studentCount: number }>>([]);
 
   // Get auth token - improved to use AuthContext first
   const getAuthToken = () => {
@@ -167,7 +167,7 @@ const Dashboard: React.FC = () => {
             try {
               const schoolResponse = await api.get('/schools/database/school-info');
               console.log('✅ School response from school_info:', schoolResponse);
-              
+
               // Extract data from nested response structure
               const schoolData = schoolResponse.data?.data || schoolResponse.data;
               console.log('📊 Extracted school data:', schoolData);
@@ -179,7 +179,7 @@ const Dashboard: React.FC = () => {
               console.warn('⚠️ Failed to fetch from school_info, trying main database:', schoolInfoErr.message);
               const fallbackResponse = await api.get(`/schools/${schoolIdentifier}/info`);
               console.log('✅ School response from main database:', fallbackResponse);
-              
+
               const schoolData = fallbackResponse.data?.data || fallbackResponse.data;
               console.log('📊 Extracted school data (fallback):', schoolData);
               setSchool(schoolData);
@@ -314,7 +314,7 @@ const Dashboard: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           console.log('📊 Today\'s attendance data:', data);
-          
+
           if (data.success) {
             const totalStudents = (data.presentCount || 0) + (data.absentCount || 0);
             if (totalStudents > 0) {
@@ -358,7 +358,7 @@ const Dashboard: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           console.log('📊 Today\'s attendance data:', data);
-          
+
           if (data.success) {
             setTodayAttendance({
               present: data.presentCount || 0,
@@ -381,7 +381,7 @@ const Dashboard: React.FC = () => {
         if (morningResponse.ok) {
           const morningData = await morningResponse.json();
           console.log('🌅 Morning attendance data:', morningData);
-          
+
           if (morningData.success) {
             setMorningAttendance({
               present: morningData.presentCount || 0,
@@ -404,7 +404,7 @@ const Dashboard: React.FC = () => {
         if (afternoonResponse.ok) {
           const afternoonData = await afternoonResponse.json();
           console.log('🌆 Afternoon attendance data:', afternoonData);
-          
+
           if (afternoonData.success) {
             setAfternoonAttendance({
               present: afternoonData.presentCount || 0,
@@ -452,7 +452,7 @@ const Dashboard: React.FC = () => {
         if (response.ok) {
           const data = await response.json();
           console.log('📅 Daily attendance data:', data);
-          
+
           if (data.success && data.dailyStats) {
             // Format data for the chart
             const formattedData = data.dailyStats.map((day: any) => ({
@@ -522,7 +522,7 @@ const Dashboard: React.FC = () => {
         if (response.ok) {
           const result = await response.json();
           console.log('📊 Class performance data:', result);
-          
+
           if (result.success && result.data) {
             setClassPerformance(result.data);
           }
@@ -613,7 +613,6 @@ const Dashboard: React.FC = () => {
                   }}
                   className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-500"
                 >
-                  <LogOut className="h-4 w-4 mr-2" />
                   Login Again
                 </button>
               )}
@@ -655,8 +654,10 @@ const Dashboard: React.FC = () => {
         <>
           <div className="flex items-center justify-between">
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <div className="text-sm text-gray-500">
-              Last updated: {new Date().toLocaleDateString()}
+            <div className="flex items-center gap-4">
+              <div className="text-sm text-gray-500">
+                Last updated: {new Date().toLocaleDateString()}
+              </div>
             </div>
           </div>
 
@@ -674,7 +675,7 @@ const Dashboard: React.FC = () => {
                     />
                   </div>
                 )}
-                
+
                 {/* School Info */}
                 <div className="flex-grow text-center md:text-left">
                   <h2 className="text-2xl font-bold text-gray-900 mb-2">{school?.name || user?.schoolName || 'Your School'}</h2>
@@ -692,7 +693,7 @@ const Dashboard: React.FC = () => {
                       </span>
                     )}
                   </div>
-                  
+
                   {/* Address */}
                   {school?.address && (
                     <div className="flex items-start justify-center md:justify-start text-gray-600 mb-2">
@@ -847,7 +848,7 @@ const Dashboard: React.FC = () => {
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis domain={[0, 100]} label={{ value: 'Percentage (%)', angle: -90, position: 'insideLeft' }} />
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number, name: string, props: any) => [
                       `${value}%`,
                       `Average: ${value}% (${props.payload.studentCount} students)`
@@ -877,15 +878,15 @@ const Dashboard: React.FC = () => {
               <div className="flex items-center justify-center mb-4">
                 <div className="bg-yellow-100 p-2 rounded-full mr-2">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-yellow-600">
-                    <circle cx="12" cy="12" r="5"/>
-                    <line x1="12" y1="1" x2="12" y2="3"/>
-                    <line x1="12" y1="21" x2="12" y2="23"/>
-                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-                    <line x1="1" y1="12" x2="3" y2="12"/>
-                    <line x1="21" y1="12" x2="23" y2="12"/>
-                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+                    <circle cx="12" cy="12" r="5" />
+                    <line x1="12" y1="1" x2="12" y2="3" />
+                    <line x1="12" y1="21" x2="12" y2="23" />
+                    <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                    <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                    <line x1="1" y1="12" x2="3" y2="12" />
+                    <line x1="21" y1="12" x2="23" y2="12" />
+                    <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                    <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900">Morning Session</h3>
@@ -906,7 +907,7 @@ const Dashboard: React.FC = () => {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number) => [`${value} students`, 'Count']}
                     contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                   />
@@ -935,7 +936,7 @@ const Dashboard: React.FC = () => {
               <div className="flex items-center justify-center mb-4">
                 <div className="bg-orange-100 p-2 rounded-full mr-2">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-orange-600">
-                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z" />
                   </svg>
                 </div>
                 <h3 className="text-lg font-semibold text-gray-900">Afternoon Session</h3>
@@ -956,7 +957,7 @@ const Dashboard: React.FC = () => {
                       <Cell key={`cell-${index}`} fill={entry.color} />
                     ))}
                   </Pie>
-                  <Tooltip 
+                  <Tooltip
                     formatter={(value: number) => [`${value} students`, 'Count']}
                     contentStyle={{ backgroundColor: 'white', border: '1px solid #e5e7eb', borderRadius: '8px' }}
                   />

@@ -252,21 +252,21 @@ function getDefaultPermissions(role) {
       updateResults: true
     },
     student: {
-      manageUsers: true,
-      manageSchoolSettings: true,
-      viewAttendance: true,
+      manageUsers: false,
+      manageSchoolSettings: false,
+      viewAttendance: false,
       viewResults: true,
       viewLeaves: false,
       messageStudentsParents: false,
       viewAcademicDetails: false,
       viewAssignments: true,
-      viewFees: true,
-      viewReports: true,
-      createTimetable: true,
+      viewFees: false,
+      viewReports: false,
+      createTimetable: false,
       viewTimetable: true,
-      markAttendance: true,
-      addAssignments: true,
-      updateResults: true
+      markAttendance: false,
+      addAssignments: false,
+      updateResults: false
     },
     parent: {
       manageUsers: false,

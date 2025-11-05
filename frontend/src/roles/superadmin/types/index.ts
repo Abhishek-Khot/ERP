@@ -70,99 +70,64 @@ export interface User {
   id: string;
   name: string;
   email: string;
-  role: 'admin' | 'teacher' | 'student' | 'parent';
-  avatar?: string;
-  phone?: string;
-  joinDate: string;
-  status: 'active' | 'inactive';
-}
-
-export interface Teacher extends User {
   role: 'teacher';
+  employeeId: string;
   subjects: string[];
   classes: string[];
-  experience: number;
+  avatar?: string;
 }
 
-export interface Student extends User {
-  role: 'student';
-  class: string;
+export interface Student {
+  id: string;
+  name: string;
   rollNumber: string;
-  parentId: string;
-  dateOfBirth: string;
+  class: string;
+  section: string;
+  email?: string;
+  parentEmail?: string;
+  avatar?: string;
 }
 
-export interface Parent extends User {
-  role: 'parent';
-  children: string[]; // student IDs
-}
-
-export interface Admin extends User {
-  role: 'admin';
-  permissions: string[];
-}
-
-export interface Attendance {
+export interface AttendanceRecord {
   id: string;
   studentId: string;
   date: string;
   status: 'present' | 'absent' | 'late';
   remarks?: string;
+  class: string;
+  subject: string;
 }
 
-export interface Mark {
+export interface Assignment {
   id: string;
-  studentId: string;
+  title: string;
+  description: string;
   subject: string;
-  examType: 'quiz' | 'midterm' | 'final' | 'assignment';
-  marks: number;
-  totalMarks: number;
-  date: string;
-  teacherId: string;
+  class: string;
+  dueDate: string;
+  attachments: string[];
+  createdDate: string;
+  status: 'active' | 'expired';
 }
 
 export interface Result {
   id: string;
   studentId: string;
-  term: string;
-  subjects: {
-    subject: string;
-    marks: number;
-    totalMarks: number;
-    grade: string;
-  }[];
-  totalMarks: number;
-  totalPossible: number;
-  percentage: number;
+  subject: string;
+  examType: string;
+  maxMarks: number;
+  obtainedMarks: number;
   grade: string;
-  rank: number;
+  date: string;
 }
 
-export interface SchoolSettings {
-  schoolName: string;
-  academicYear: string;
-  terms: string[];
-  subjects: string[];
-  classes: string[];
-  gradingSystem: {
-    A: { min: number; max: number };
-    B: { min: number; max: number };
-    C: { min: number; max: number };
-    D: { min: number; max: number };
-    F: { min: number; max: number };
-  };
-  attendanceThreshold: number;
-  workingDays: string[];
-  schoolHours: {
-    start: string;
-    end: string;
-  };
-}
-
-export interface SchoolData {
-  users: (Teacher | Student | Parent | Admin)[];
-  attendance: Attendance[];
-  marks: Mark[];
-  results: Result[];
-  settings: SchoolSettings;
+export interface Message {
+  id: string;
+  sender: string;
+  recipient: string[];
+  subject: string;
+  content: string;
+  timestamp: string;
+  isRead: boolean;
+  type: 'individual' | 'group';
 }

@@ -48,7 +48,7 @@ const ChalanContextMenu: React.FC<ChalanContextMenuProps> = ({
   });
   const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [description, setDescription] = useState<string>(installment?.description || '');
-  const [isEditing, setIsEditing] = useState(false);
+  const [isEditing, setIsEditing] = useState(true); // Start in edit mode by default
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Handle clicks outside the context menu

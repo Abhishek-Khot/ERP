@@ -468,91 +468,33 @@ const AcademicNavigation: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-800">Classes Management</h2>
-                <button
-                  onClick={addClass}
-                  disabled={!newClassName.trim() || loading}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Class
-                </button>
               </div>
 
               {/* Add Class Form */}
-              {/* Add Class Form - Compact Version */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-md font-medium text-gray-800 mb-4">Create New Class</h3>
-                <div className="flex gap-4">
-                  <div className="flex-1 relative">
-                    <select
-                      value={newClassName}
-                      onChange={(e) => setNewClassName(e.target.value)}
-                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white appearance-none cursor-pointer shadow-sm hover:border-gray-400 transition-colors"
-                    >
-                      <option value="">Select class...</option>
-                      <optgroup label="Pre-Primary" className="text-gray-500">
-                        <option value="LKG" className="text-gray-700">LKG</option>
-                        <option value="UKG" className="text-gray-700">UKG</option>
-                      </optgroup>
-                      <optgroup label="Primary School (1-5)" className="text-gray-500">
-                        {[1, 2, 3, 4, 5].map(num => (
-                          <option key={num} value={num.toString()} className="text-gray-700">Class {num}</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="Middle School (6-8)" className="text-gray-500">
-                        {[6, 7, 8].map(num => (
-                          <option key={num} value={num.toString()} className="text-gray-700">Class {num}</option>
-                        ))}
-                      </optgroup>
-                      <optgroup label="High School (9-12)" className="text-gray-500">
-                        {[9, 10, 11, 12].map(num => (
-                          <option key={num} value={num.toString()} className="text-gray-700">Class {num}</option>
-                        ))}
-                      </optgroup>
-                    </select>
-                    {/* Custom dropdown arrow */}
-                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                      </svg>
-                    </div>
-                  </div>
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-md font-medium text-gray-800 mb-3">Add New Class</h3>
+                <div className="flex gap-3 items-center">
+                  <select
+                    value={newClassName}
+                    onChange={(e) => setNewClassName(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select class...</option>
+                    <option value="LKG">LKG</option>
+                    <option value="UKG">UKG</option>
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map(num => (
+                      <option key={num} value={num.toString()}>Class {num}</option>
+                    ))}
+                  </select>
                   <button
                     onClick={addClass}
                     disabled={!newClassName.trim() || loading}
-                    className="px-6 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white rounded-lg hover:from-blue-700 hover:to-blue-800 disabled:from-gray-400 disabled:to-gray-500 disabled:cursor-not-allowed font-medium shadow-sm hover:shadow-md transition-all duration-200 flex items-center gap-2 min-w-[120px] justify-center"
+                    className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
                   >
-                    {loading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent"></div>
-                        Adding...
-                      </>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4" />
-                        Add Class
-                      </>
-                    )}
+                    <Plus className="h-4 w-4" />
+                    Add Class
                   </button>
                 </div>
-                {newClassName && (
-                  <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="text-sm font-medium text-green-800">
-                        Selected: <strong className="text-green-900">
-                          {newClassName.includes('LKG') || newClassName.includes('UKG') ? newClassName : `Class ${newClassName}`}
-                        </strong>
-                      </span>
-                    </div>
-                    <button
-                      onClick={() => setNewClassName('')}
-                      className="text-green-600 hover:text-green-800 text-sm font-medium px-2 py-1 rounded hover:bg-green-100 transition-colors"
-                    >
-                      Clear
-                    </button>
-                  </div>
-                )}
               </div>
 
               {/* Debug Info */}
@@ -614,48 +556,37 @@ const AcademicNavigation: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-800">Sections Management</h2>
-                <button
-                  onClick={addSection}
-                  disabled={!selectedClass || !newSection.trim() || loading}
-                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Section
-                </button>
               </div>
 
               {/* Add Section Form */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-md font-medium text-gray-800 mb-4">Add Section to Class</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-md font-medium text-gray-800 mb-3">Add New Section</h3>
+                <div className="flex gap-3">
                   <select
                     value={selectedClass}
                     onChange={(e) => setSelectedClass(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
                   >
                     <option value="">Select a class...</option>
                     {classes.map(cls => (
-                      <option key={cls._id} value={cls._id}>
-                        Class {cls.className}
-                      </option>
+                      <option key={cls._id} value={cls._id}>Class {cls.className}</option>
                     ))}
                   </select>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={newSection}
-                      onChange={(e) => setNewSection(e.target.value.toUpperCase())}
-                      placeholder="Enter section name (e.g., A, B, C)"
-                      className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    />
-                    <button
-                      onClick={addSection}
-                      disabled={!selectedClass || !newSection.trim() || loading}
-                      className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    >
-                      {loading ? 'Adding...' : 'Add'}
-                    </button>
-                  </div>
+                  <input
+                    type="text"
+                    value={newSection}
+                    onChange={(e) => setNewSection(e.target.value.toUpperCase())}
+                    placeholder="Section (e.g., A, B, C)"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500"
+                  />
+                  <button
+                    onClick={addSection}
+                    disabled={!selectedClass || !newSection.trim() || loading}
+                    className="px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Section
+                  </button>
                 </div>
               </div>
 
@@ -695,54 +626,51 @@ const AcademicNavigation: React.FC = () => {
             <div>
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-semibold text-gray-800">Tests Management</h2>
-                <button
-                  onClick={addTest}
-                  className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 flex items-center gap-2"
-                >
-                  <Plus className="h-4 w-4" />
-                  Add Test
-                </button>
               </div>
 
               {/* Add Test Form */}
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h3 className="text-md font-medium text-gray-800 mb-4">Create New Test</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="mb-4 p-4 bg-gray-50 rounded-lg">
+                <h3 className="text-md font-medium text-gray-800 mb-3">Add New Test</h3>
+                <div className="flex gap-3 mb-3">
                   <select
                     value={selectedClass}
                     onChange={(e) => setSelectedClass(e.target.value)}
                     disabled={allClasses}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 disabled:bg-gray-200 disabled:cursor-not-allowed"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 disabled:bg-gray-200"
                   >
                     <option value="">Select a class...</option>
                     {classes.map(cls => (
-                      <option key={cls._id} value={cls._id}>
-                        Class {cls.className}
-                      </option>
+                      <option key={cls._id} value={cls._id}>Class {cls.className}</option>
                     ))}
                   </select>
                   <input
                     type="text"
                     value={newTestName}
                     onChange={(e) => setNewTestName(e.target.value)}
-                    placeholder="Enter test name (e.g., Midterm, Unit Test 1)"
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Test name (e.g., Midterm, Unit Test 1)"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500"
                   />
+                  <button
+                    onClick={addTest}
+                    disabled={(!allClasses && !selectedClass) || !newTestName.trim() || loading}
+                    className="px-6 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center gap-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Test
+                  </button>
                 </div>
-                
-                {/* Checkboxes for All Sections and All Classes */}
-                <div className="mt-4 space-y-2">
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                <div className="flex gap-4 text-sm">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={allSections}
                       onChange={(e) => setAllSections(e.target.checked)}
                       disabled={allClasses}
-                      className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                      className="rounded"
                     />
-                    <span>Create for all sections of selected class</span>
+                    <span>All sections</span>
                   </label>
-                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
+                  <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
                       checked={allClasses}
@@ -753,34 +681,11 @@ const AcademicNavigation: React.FC = () => {
                           setAllSections(true);
                         }
                       }}
-                      className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                      className="rounded"
                     />
-                    <span className="font-medium">Create for ALL classes (all sections)</span>
+                    <span className="font-medium">All classes</span>
                   </label>
                 </div>
-
-                {/* Info message */}
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
-                  <p className="text-sm text-blue-800">
-                    {allClasses ? (
-                      <><strong>Note:</strong> This test will be created for all classes and all their sections. Admin will configure max marks and weightage later.</>
-                    ) : selectedClass && allSections ? (
-                      <><strong>Note:</strong> This test will be created for all sections of Class {classes.find(c => c._id === selectedClass)?.className}. Admin will configure max marks and weightage later.</>
-                    ) : selectedClass ? (
-                      <><strong>Note:</strong> This test will be created for Class {classes.find(c => c._id === selectedClass)?.className}. Admin will configure max marks and weightage later.</>
-                    ) : (
-                      <><strong>Note:</strong> Tests are created without max marks and weightage. Admin will configure these in the Scoring System.</>
-                    )}
-                  </p>
-                </div>
-
-                <button
-                  onClick={addTest}
-                  disabled={(!allClasses && !selectedClass) || !newTestName.trim() || loading}
-                  className="mt-4 w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                >
-                  {loading ? 'Creating Test...' : 'Create Test'}
-                </button>
               </div>
 
               {/* Tests List */}

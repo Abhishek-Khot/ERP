@@ -8,6 +8,7 @@ const SchoolDatabaseManager = require('../utils/databaseManager');
 const path = require('path');
 const fs = require('fs');
 const sharp = require('sharp');
+const { uploadToCloudinary, deleteFromCloudinary, extractPublicId, deleteLocalFile } = require('../config/cloudinary');
 
 // Get all users for a school with standardized format
 exports.getAllUsers = async (req, res) => {
@@ -511,21 +512,23 @@ exports.updateUser = async (req, res) => { /* ... Keep code from previous correc
       changesMade = true;
     }
 
-    // Handle profile image upload with Sharp compression
+    // Handle profile image upload with Cloudinary
     if (req.file) {
+      let tempCompressedPath = null;
+      
       try {
         console.log(`📸 Original image: ${req.file.originalname}, Size: ${(req.file.size / 1024).toFixed(2)}KB`);
         
-        // Create uploads directory structure: uploads/profiles/schoolCode/
-        const uploadsDir = path.join(__dirname, '..', 'uploads', 'profiles', upperSchoolCode);
-        if (!fs.existsSync(uploadsDir)) {
-          fs.mkdirSync(uploadsDir, { recursive: true });
+        // Create temp directory for compression
+        const tempDir = path.join(__dirname, '..', 'uploads', 'temp');
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
         }
 
         // Generate unique filename with .jpg extension (Sharp will convert to JPEG)
         const timestamp = Date.now();
         const filename = `${user.userId}_${timestamp}.jpg`;
-        const destPath = path.join(uploadsDir, filename);
+        tempCompressedPath = path.join(tempDir, filename);
 
         // Compress image using Sharp to ~30KB
         console.log('🔄 Compressing image with Sharp...');
@@ -533,13 +536,13 @@ exports.updateUser = async (req, res) => { /* ... Keep code from previous correc
         await sharpInstance
           .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
           .jpeg({ quality: 60 })
-          .toFile(destPath);
+          .toFile(tempCompressedPath);
         
         // Release Sharp resources
         sharpInstance.destroy();
         
         // Check file size and re-compress if needed
-        let stats = fs.statSync(destPath);
+        let stats = fs.statSync(tempCompressedPath);
         let quality = 60;
         
         while (stats.size > 30 * 1024 && quality > 20) {
@@ -549,45 +552,55 @@ exports.updateUser = async (req, res) => { /* ... Keep code from previous correc
           await recompressInstance
             .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
             .jpeg({ quality })
-            .toFile(destPath);
+            .toFile(tempCompressedPath);
           recompressInstance.destroy();
-          stats = fs.statSync(destPath);
+          stats = fs.statSync(tempCompressedPath);
         }
         
         console.log(`✅ Compressed image: ${(stats.size / 1024).toFixed(2)}KB (quality: ${quality})`);
         
-        const newImagePath = `/uploads/profiles/${upperSchoolCode}/${filename}`;
+        // Upload to Cloudinary
+        const cloudinaryFolder = `profiles/${upperSchoolCode}`;
+        const publicId = `${user.userId}_${timestamp}`;
+        const uploadResult = await uploadToCloudinary(tempCompressedPath, cloudinaryFolder, publicId);
         
-        // Store old image path for deletion AFTER database update
-        const oldImagePath = user.profileImage ? path.join(__dirname, '..', user.profileImage) : null;
+        const newImageUrl = uploadResult.secure_url;
+        
+        // Extract old image public ID for deletion (check both profileImage and profilePicture)
+        const currentProfileImage = user.profileImage || user.profilePicture;
+        console.log(`🔍 DEBUG: Current user.profileImage:`, user.profileImage);
+        console.log(`🔍 DEBUG: Current user.profilePicture:`, user.profilePicture);
+        console.log(`🔍 DEBUG: Using currentProfileImage:`, currentProfileImage);
+        console.log(`🔍 DEBUG: User role:`, user.role);
+        console.log(`🔍 DEBUG: Collection name:`, collectionName);
+        const oldImagePublicId = currentProfileImage ? extractPublicId(currentProfileImage) : null;
+        console.log(`🔍 DEBUG: Extracted oldImagePublicId:`, oldImagePublicId);
         
         // CRITICAL: Set profileImage directly and mark changes as made
         console.log(`🔍 DEBUG: Before setting profileImage - updateFields:`, JSON.stringify(updateFields));
         console.log(`🔍 DEBUG: changesMade before:`, changesMade);
         
-        updateFields['profileImage'] = newImagePath;
+        updateFields['profileImage'] = newImageUrl;
         changesMade = true;
         
         console.log(`🔍 DEBUG: After setting profileImage - updateFields:`, JSON.stringify(updateFields));
         console.log(`🔍 DEBUG: changesMade after:`, changesMade);
-        console.log(`✅ Profile image will be saved to DB: ${newImagePath}`);
-        console.log(`📝 Old image path (will delete after DB update): ${oldImagePath || 'None'}`);
+        console.log(`✅ Profile image will be saved to DB: ${newImageUrl}`);
+        console.log(`📝 Old image public ID (will delete after DB update): ${oldImagePublicId || 'None'}`);
         
-        // Store cleanup paths for deletion AFTER successful database update
+        // Store cleanup info for deletion AFTER successful database update
         req.imageCleanup = {
-          oldImagePath: oldImagePath,
-          tempFilePath: req.file.path
+          oldImagePublicId: oldImagePublicId,
+          tempFilePath: req.file.path,
+          tempCompressedPath: tempCompressedPath
         };
       } catch (error) {
         console.error('❌ Error handling profile image upload:', error);
-        // Clean up temp file immediately on error
-        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-          try {
-            fs.unlinkSync(req.file.path);
-            console.log(`🗑️ Cleaned up temp file after error`);
-          } catch (err) {
-            console.warn(`⚠️ Could not clean up temp file: ${err.message}`);
-          }
+        
+        // Clean up temp files immediately on error
+        deleteLocalFile(req.file.path);
+        if (tempCompressedPath) {
+          deleteLocalFile(tempCompressedPath);
         }
       }
     }
@@ -693,29 +706,23 @@ exports.updateUser = async (req, res) => { /* ... Keep code from previous correc
         console.log(`✅ Profile image URL saved to database: ${updateFields['profileImage']}`);
       }
       
-      // NOW delete old image and temp file AFTER successful DB update
+      // NOW delete old image and temp files AFTER successful DB update
       if (req.imageCleanup) {
-        const { oldImagePath, tempFilePath } = req.imageCleanup;
+        const { oldImagePublicId, tempFilePath, tempCompressedPath } = req.imageCleanup;
         
-        // Delete old profile image immediately
-        if (oldImagePath && fs.existsSync(oldImagePath)) {
+        // Delete old profile image from Cloudinary
+        if (oldImagePublicId) {
           try {
-            fs.unlinkSync(oldImagePath);
-            console.log(`🗑️ Deleted old profile image: ${path.basename(oldImagePath)}`);
+            await deleteFromCloudinary(oldImagePublicId);
+            console.log(`🗑️ Deleted old profile image from Cloudinary: ${oldImagePublicId}`);
           } catch (err) {
-            console.warn(`⚠️ Failed to delete old image: ${err.message}`);
+            console.warn(`⚠️ Failed to delete old image from Cloudinary: ${err.message}`);
           }
         }
         
-        // Delete temp file immediately
-        if (tempFilePath && fs.existsSync(tempFilePath)) {
-          try {
-            fs.unlinkSync(tempFilePath);
-            console.log(`🗑️ Deleted temp file: ${path.basename(tempFilePath)}`);
-          } catch (err) {
-            console.warn(`⚠️ Could not delete temp file: ${err.message}`);
-          }
-        }
+        // Delete temp files
+        deleteLocalFile(tempFilePath);
+        deleteLocalFile(tempCompressedPath);
       }
       
       res.json({ success: true, message: 'User updated successfully' });
@@ -768,8 +775,15 @@ exports.deleteUser = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Cannot deactivate your own account.' });
     }
 
-    // Store image path for deletion AFTER successful DB update
-    const imagePathToDelete = user.profileImage ? path.join(__dirname, '..', user.profileImage) : null;
+    // Extract Cloudinary public ID for deletion AFTER successful DB update (check both profileImage and profilePicture)
+    const currentProfileImage = user.profileImage || user.profilePicture;
+    console.log(`🔍 DEBUG DELETE: User role:`, user.role);
+    console.log(`🔍 DEBUG DELETE: Collection name:`, collectionName);
+    console.log(`🔍 DEBUG DELETE: user.profileImage:`, user.profileImage);
+    console.log(`🔍 DEBUG DELETE: user.profilePicture:`, user.profilePicture);
+    console.log(`🔍 DEBUG DELETE: Using currentProfileImage:`, currentProfileImage);
+    const imagePublicIdToDelete = currentProfileImage ? extractPublicId(currentProfileImage) : null;
+    console.log(`🔍 DEBUG DELETE: Extracted imagePublicIdToDelete:`, imagePublicIdToDelete);
 
     const updateResult = await db.collection(collectionName).updateOne(
       { _id: user._id },
@@ -791,18 +805,13 @@ exports.deleteUser = async (req, res) => {
 
     console.log(`✅ User ${user.userId} deactivated successfully in ${collectionName}.`);
     
-    // NOW delete profile image AFTER successful database update
-    if (imagePathToDelete) {
-      console.log(`🗑️ Attempting to delete profile image: ${imagePathToDelete}`);
-      if (fs.existsSync(imagePathToDelete)) {
-        try {
-          fs.unlinkSync(imagePathToDelete);
-          console.log(`✅ Successfully deleted profile image: ${path.basename(imagePathToDelete)}`);
-        } catch (err) {
-          console.warn(`⚠️ Failed to delete profile image: ${err.message}`);
-        }
-      } else {
-        console.log(`ℹ️ Profile image not found at: ${imagePathToDelete}`);
+    // NOW delete profile image from Cloudinary AFTER successful database update
+    if (imagePublicIdToDelete) {
+      try {
+        await deleteFromCloudinary(imagePublicIdToDelete);
+        console.log(`✅ Successfully deleted profile image from Cloudinary: ${imagePublicIdToDelete}`);
+      } catch (err) {
+        console.warn(`⚠️ Failed to delete profile image from Cloudinary: ${err.message}`);
       }
     }
     

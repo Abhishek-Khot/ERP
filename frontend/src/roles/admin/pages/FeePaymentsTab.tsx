@@ -6,8 +6,6 @@ import { feesAPI, userAPI, schoolAPI } from '../../../services/api';
 import toast from 'react-hot-toast';
 import DualCopyReceipt from '../../../components/receipts/DualCopyReceipt';
 import ViewChalan from '../../../components/fees/ViewChalan';
-import ChalanContextMenu from '../../../components/fees/ChalanContextMenu';
-import useChalanContextMenu from '../../../hooks/useChalanContextMenu';
 
 const FeePaymentsTab: React.FC = () => {
   const { user } = useAuth();
@@ -15,6 +13,7 @@ const FeePaymentsTab: React.FC = () => {
   const [selectedSection, setSelectedSection] = useState('ALL');
   const [searchTerm, setSearchTerm] = useState('');
   const [schoolDetails, setSchoolDetails] = useState<{
+    name?: string;
     schoolName?: string;
     schoolCode?: string;
     address?: {
@@ -148,77 +147,7 @@ const FeePaymentsTab: React.FC = () => {
   const [viewingChalan, setViewingChalan] = useState<any | null>(null);
   const [isChalanModalOpen, setIsChalanModalOpen] = useState(false);
 
-  // Chalan context menu hooks
-  const {
-    isContextMenuOpen,
-    contextMenuPosition,
-    selectedStudent,
-    handleContextMenu,
-    closeContextMenu,
-  } = useChalanContextMenu();
 
-  // Handle chalan generation
-  const handleGenerateChalan = useCallback(async (data: {
-    amount: number;
-    dueDate: string;
-    paymentDate?: string;
-    description?: string;
-  }) => {
-    if (!selectedStudent) {
-      toast.error('No student selected');
-      return;
-    }
-    
-    try {
-      // Prepare chalan data in the format expected by the backend
-      const chalanData = {
-        student: {
-          _id: selectedStudent.id || selectedStudent._id,
-          name: selectedStudent.name,
-          admissionNumber: selectedStudent.admissionNumber || selectedStudent.rollNumber || '',
-          class: selectedStudent.class || selectedStudent.className || '',
-          section: selectedStudent.section || '',
-          academicYear: selectedStudent.academicYear || '2024-2025'
-        },
-        amount: data.amount,
-        dueDate: data.dueDate,
-        paymentDate: data.paymentDate || new Date().toISOString().split('T')[0],
-        description: data.description || 'Fee payment chalan',
-        status: 'generated',
-        installments: [{
-          name: 'Fee Payment',
-          amount: data.amount,
-          dueDate: data.dueDate,
-          description: data.description || 'Fee payment chalan',
-          status: 'unpaid',
-          chalanDate: data.paymentDate || new Date().toISOString().split('T')[0]
-        }],
-        schoolId: user?.schoolId,
-        createdBy: user?.id || 'system'
-      };
-      
-      console.log('Sending chalan data:', chalanData);
-      
-      // Call the API to generate chalan
-      const response = await feesAPI.generateChalan(chalanData);
-      
-      if (response.success) {
-        toast.success('Chalan generated successfully');
-        // Refresh the student data
-        if (fetchRecords) {
-          await fetchRecords();
-        } else if (fetchStudents) {
-          await fetchStudents();
-        }
-      } else {
-        throw new Error(response.message || 'Failed to generate chalan');
-      }
-    } catch (error: any) {
-      console.error('Error generating chalan:', error);
-      const errorMessage = error.response?.data?.message || error.message || 'Failed to generate chalan';
-      toast.error(errorMessage);
-    }
-  }, [selectedStudent, user]);
 
   
   // Debug effect for chalan modal
@@ -255,6 +184,21 @@ const FeePaymentsTab: React.FC = () => {
       });
       
       // Fetch fee records and student details in parallel
+      // Don't pass 'ALL' as a filter - let backend return all students
+      const studentFilters: any = {
+        search: searchTerm,
+        limit: 50,
+        fields: '_id,userId,name,studentId,class,section,admissionNumber'
+      };
+      
+      if (selectedClass && selectedClass !== 'ALL') {
+        studentFilters.class = selectedClass;
+      }
+      
+      if (selectedSection && selectedSection !== 'ALL') {
+        studentFilters.section = selectedSection;
+      }
+      
       const [feeRes, studentsRes] = await Promise.all([
         feesAPI.getStudentFeeRecords({
           class: selectedClass,
@@ -263,16 +207,13 @@ const FeePaymentsTab: React.FC = () => {
           limit: 50,
           fields: 'studentId,installments,totalAmount,paidAmount,balance'
         }),
-        userAPI.getUsersByRole('student', {
-          class: selectedClass,
-          section: selectedSection,
-          search: searchTerm,
-          limit: 50,
-          fields: '_id,userId,name,studentId,class,section,admissionNumber'
-        })
+        userAPI.getUsersByRole('student', studentFilters)
       ]);
       
       console.log('Fee records response:', feeRes);
+      console.log('Students API response:', studentsRes);
+      console.log('Students API response.data:', studentsRes.data);
+      console.log('Students API response.data.data:', studentsRes.data?.data);
       
       // Process student details in parallel with fee records
       const studentDetails = new Map();
@@ -281,29 +222,56 @@ const FeePaymentsTab: React.FC = () => {
       // Handle different response structures
       if (Array.isArray(studentsRes.data)) {
         students = studentsRes.data;
+        console.log('Using studentsRes.data (array)');
       } else if (studentsRes.data?.data) {
         students = Array.isArray(studentsRes.data.data) 
           ? studentsRes.data.data 
           : studentsRes.data.data?.students || [];
+        console.log('Using studentsRes.data.data, count:', students.length);
       }
       
-      // Create a map of studentId to userId
+      console.log('===== STUDENTS DATA =====');
+      console.log('Total students fetched:', students.length);
+      console.log('First student sample:', students[0]);
+      console.log('First 3 students:', students.slice(0, 3).map((s: any) => ({
+        _id: s._id,
+        userId: s.userId,
+        name: s.name?.displayName || s.name
+      })));
+      
+      // Create a map of MongoDB _id to userId (user-friendly ID)
       students.forEach((student: any) => {
-        const userId = student.userId || student._id;
-        const studentId = student.studentId || student._id;
+        const userId = student.userId; // User-friendly ID like KVS-S-0003
+        const mongoId = student._id; // MongoDB ObjectId
         
-        if (studentId && userId) {
-          studentDetails.set(studentId.toString(), userId.toString());
+        if (mongoId && userId) {
+          studentDetails.set(mongoId.toString(), userId.toString());
         }
       });
+      
+      console.log('Student details map created with', studentDetails.size, 'entries');
+      console.log('Sample map entries:', Array.from(studentDetails.entries()).slice(0, 3));
       
       console.log('Student details map:', Object.fromEntries(studentDetails));
       
       // Process fee records with optimized mapping
       const data = feeRes.data?.data?.records || [];
       const mapped = data.map((r: any) => {
-        // Get userId from the record or fall back to the map
-        const userId = r.userId || studentDetails.get(r.studentId?.toString()) || r.studentId;
+        // Find the matching student from the students array by MongoDB _id
+        const matchingStudent = students.find((s: any) => 
+          s._id?.toString() === r.studentId?.toString()
+        );
+        
+        // Get userId from the matching student record
+        const userId = matchingStudent?.userId || r.userId || r.studentId;
+        
+        console.log('Resolving userId for student:', {
+          feeRecordStudentId: r.studentId,
+          matchingStudentFound: !!matchingStudent,
+          matchingStudentUserId: matchingStudent?.userId,
+          matchingStudentName: matchingStudent?.name?.displayName,
+          finalUserId: userId
+        });
         
         // Process installments with minimal data transformation
         const installments = (r.installments || []).map((i: any) => ({
@@ -1245,14 +1213,21 @@ hasSchoolLogo: !!(data.logoUrl || data.logo || schoolData.schoolLogo),
 
     console.log('School details:', schoolDetails);
     console.log('Bank details to be passed:', bankDetails);
+    console.log('Student object:', student);
+    console.log('Student userId:', student.userId);
+    console.log('Student mongoId:', student.mongoId);
+    console.log('Student studentId:', student.studentId);
 
-    setViewingChalan({
+    const chalanData = {
       ...installment,
       studentName: student.name,
+      studentId: student.mongoId || student.studentId, // MongoDB ObjectId
+      userId: student.userId || student.studentId, // User-friendly ID like KVS-S-0003
       className: student.class,
+      section: student.section,
       academicYear: '2024-25',
       // School details
-      schoolName: schoolDetails.schoolName || 'School Name',
+      schoolName: schoolDetails.name || schoolDetails.schoolName || 'School Name',
       schoolAddress: [
         schoolDetails.address?.addressLine1,
         schoolDetails.address?.city,
@@ -1263,15 +1238,12 @@ hasSchoolLogo: !!(data.logoUrl || data.logo || schoolData.schoolLogo),
       schoolEmail: schoolDetails.contact?.email || '',
       // Bank details
       bankDetails: bankDetails
-    });
+    };
     
-    console.log('Viewing chalan data:', {
-      ...installment,
-      studentName: student.name,
-      className: student.class,
-      bankDetails: bankDetails
-    });
+    console.log('Chalan data being set:', chalanData);
+    console.log('Chalan userId:', chalanData.userId);
     
+    setViewingChalan(chalanData);
     setIsChalanModalOpen(true);
   };
 
@@ -1704,7 +1676,7 @@ return (
                                 academicYear: student.academicYear || '2024-25',
                                 
                                 // School Information - dynamic from school details
-                                schoolName: schoolDetails.schoolName,
+                                schoolName: schoolDetails.name || schoolDetails.schoolName || 'School Name',
                                 schoolAddress: [
                                   schoolDetails.address?.addressLine1,
                                   schoolDetails.address?.city,
@@ -1766,23 +1738,7 @@ return (
                   title="View Chalan"
                 >
                           <Eye className="h-3 w-3 mr-1" />
-                          <div
-                            onContextMenu={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleContextMenu(e, student);
-                            }}
-                            onClick={() => {
-                              // Existing click handler
-                              const chalanInstallment = student.installments?.find(i => i.chalanNumber);
-                              if (chalanInstallment) {
-                                // ... existing chalan view logic ...
-                              }
-                            }}
-                            className="w-full h-full flex items-center justify-center"
-                          >
-                            Chalan
-                          </div>
+                          Chalan
                 </button>
               )}
                   </td>
@@ -1793,30 +1749,7 @@ return (
         </div>
       </div>
 
-      {/* Chalan Context Menu */}
-      {isContextMenuOpen && selectedStudent && (
-        <ChalanContextMenu
-          isOpen={isContextMenuOpen}
-          position={contextMenuPosition}
-          onClose={closeContextMenu}
-          onGenerateChalan={handleGenerateChalan}
-          student={{
-            id: selectedStudent.id || selectedStudent._id,
-            name: selectedStudent.name,
-            className: selectedStudent.class || selectedStudent.className || '',
-            section: selectedStudent.section || '',
-            admissionNumber: selectedStudent.admissionNumber || selectedStudent.rollNumber || ''
-          }}
-          installment={{
-            name: 'Fee Payment',
-            amount: selectedStudent.installments?.[0]?.amount || 0,
-            dueDate: selectedStudent.installments?.[0]?.dueDate || new Date().toISOString().split('T')[0],
-            description: selectedStudent.installments?.[0]?.description || 'Fee payment chalan',
-            status: 'generated'
-          }}
-          isCentered={true}
-        />
-      )} {/* Payment Modal */}
+      {/* Payment Modal */}
       {isModalOpen && activeStudent && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl mx-4">

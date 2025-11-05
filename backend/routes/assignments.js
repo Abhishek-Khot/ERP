@@ -2,14 +2,22 @@ const express = require('express');
 const router = express.Router();
 const multer = require('multer');
 const path = require('path');
+const fs = require('fs');
 const assignmentController = require('../controllers/assignmentController');
 const { auth, authorize } = require('../middleware/auth');
 const checkPermission = require('../middleware/permissionCheck');
 
+// Ensure temp directory exists
+const tempDir = path.join(__dirname, '..', 'uploads', 'temp');
+if (!fs.existsSync(tempDir)) {
+  fs.mkdirSync(tempDir, { recursive: true });
+  console.log('✅ Created temp directory for assignments');
+}
+
 // Configure multer for assignment file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, 'uploads/assignments/');
+    cb(null, 'uploads/temp/'); // Use temp directory
   },
   filename: (req, file, cb) => {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
@@ -76,8 +84,8 @@ router.post('/', upload.array('attachments', 5),
   assignmentController.createAssignment
 );
 
-// Assignment-specific routes
-router.get('/:assignmentId', assignmentController.getAssignmentById);
+// Assignment-specific routes - all require viewAssignments permission
+router.get('/:assignmentId', checkPermission('viewAssignments'), assignmentController.getAssignmentById);
 router.put('/:assignmentId', 
   (req, res, next) => {
     console.log('[UPDATE ROUTE] User role:', req.user?.role);
@@ -85,14 +93,10 @@ router.put('/:assignmentId',
     next();
   },
   upload.array('attachments', 5), 
+  authorize(['admin', 'teacher']), 
+  checkPermission('viewAssignments'), 
   assignmentController.updateAssignment
 );
-router.patch('/:assignmentId/publish', authorize(['admin', 'teacher']), assignmentController.publishAssignment);
-router.delete('/:assignmentId', assignmentController.deleteAssignment);
-
-// Assignment-specific routes - all require viewAssignments permission
-router.get('/:assignmentId', checkPermission('viewAssignments'), assignmentController.getAssignmentById);
-router.put('/:assignmentId', authorize(['admin', 'teacher']), checkPermission('viewAssignments'), assignmentController.updateAssignment);
 router.patch('/:assignmentId/publish', authorize(['admin', 'teacher']), checkPermission('viewAssignments'), assignmentController.publishAssignment);
 router.delete('/:assignmentId', authorize(['admin', 'teacher']), checkPermission('viewAssignments'), assignmentController.deleteAssignment);
 

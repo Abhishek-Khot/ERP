@@ -1,19 +1,22 @@
 const express = require('express');
 const router = express.Router();
 const chalanController = require('../controllers/chalanController');
-const { protect } = require('../middleware/authMiddleware');
+const { auth, authorize } = require('../middleware/auth');
 
-// Get next chalan number
-router.get('/next-chalan-number', protect, chalanController.getNextChalanNumber);
+// Apply authentication middleware to all routes
+router.use(auth);
+
+// Get next chalan number (no role restriction for this)
+router.get('/next-chalan-number', chalanController.getNextChalanNumber);
 
 // Development/Admin routes
-router.get('/debug/student/:studentId', protect, chalanController.getStudentChalanData);
+router.get('/debug/student/:studentId', chalanController.getStudentChalanData);
 
-// Standard routes
-router.post('/generate', protect, chalanController.generateChalans);
-router.get('/', protect, chalanController.getChalans);
-router.get('/:id', protect, chalanController.getChalanById);
-router.get('/student/:studentId', protect, chalanController.getChalansByStudent);
-router.post('/:id/pay', protect, chalanController.markAsPaid);
+// Standard routes - restricted to admin, superadmin, accountant
+router.post('/generate', authorize('admin', 'superadmin', 'accountant'), chalanController.generateChalans);
+router.get('/', chalanController.getChalans);
+router.get('/student/:studentId', chalanController.getChalansByStudent);
+router.get('/:id', chalanController.getChalanById);
+router.post('/:id/pay', authorize('admin', 'superadmin', 'accountant'), chalanController.markAsPaid);
 
 module.exports = router;

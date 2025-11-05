@@ -539,35 +539,46 @@ exports.getTeacherMessages = async (req, res) => {
     const db = connection.db;
     const messagesCollection = db.collection('messages');
     
-    // Fetch all messages from the teacher's school (sorted by newest first)
+    // Get query parameters for pagination
+    const { limit = 20, page = 1 } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    
+    // Fetch messages from the teacher's school (sorted by newest first)
     const messages = await messagesCollection.find({})
       .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit))
       .toArray();
     
     console.log(`✅ Found ${messages.length} messages for teacher`);
     
-    // Format messages for frontend
-    const formattedMessages = messages.map(msg => ({
-      id: msg._id.toString(),
-      class: msg.class,
-      section: msg.section,
-      adminId: msg.adminId,
-      title: msg.title,
-      subject: msg.subject,
-      message: msg.message,
-      content: msg.message, // Alias for compatibility
-      createdAt: msg.createdAt,
-      timestamp: msg.createdAt, // Alias for compatibility
-      schoolId: msg.schoolId,
-      messageAge: calculateMessageAge(msg.createdAt),
-      type: 'group', // All admin messages are group messages
-      isRead: true, // Teachers can only view, so mark as read
-      sender: 'Admin',
-      recipient: [`Class ${msg.class}-${msg.section}`]
-    }));
+    // Format messages for frontend (compatible with teacher dashboard expectations)
+    const formattedMessages = messages
+      .filter(msg => msg.title && msg.subject && msg.message) // Filter out incomplete messages
+      .map(msg => ({
+        id: msg._id.toString(),
+        class: msg.class || 'Unknown',
+        section: msg.section || 'Unknown',
+        adminId: msg.adminId,
+        title: msg.title,
+        subject: msg.subject,
+        message: msg.message,
+        content: msg.message, // Alias for compatibility
+        createdAt: msg.createdAt,
+        timestamp: msg.createdAt, // Alias for compatibility
+        schoolId: msg.schoolId,
+        messageAge: calculateMessageAge(msg.createdAt),
+        type: 'group', // All admin messages are group messages
+        isRead: true, // Teachers can only view, so mark as read
+        sender: 'Admin',
+        senderName: 'School Admin', // Add senderName for dashboard compatibility
+        recipient: [`Class ${msg.class || 'Unknown'}-${msg.section || 'Unknown'}`],
+        recipientType: `Class ${msg.class || 'Unknown'}-${msg.section || 'Unknown'}` // Add recipientType for dashboard compatibility
+      }));
     
     res.json({
       success: true,
+      messages: formattedMessages, // Move messages to root level for dashboard compatibility
       data: {
         messages: formattedMessages,
         total: formattedMessages.length

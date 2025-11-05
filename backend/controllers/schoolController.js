@@ -6,6 +6,9 @@ const School = require('../models/School');
 const User = require('../models/User');
 const TestDetails = require('../models/TestDetails');
 const sharp = require('sharp');
+const { uploadToCloudinary, deleteFromCloudinary, extractPublicId, deleteLocalFile } = require('../config/cloudinary');
+const path = require('path');
+const fs = require('fs');
 
 // Helper to normalize a provided name into schema-compliant fields
 function normalizeName(inputName, fallbackLast = 'User') {
@@ -723,8 +726,8 @@ exports.updateBankDetails = async (req, res) => {
     res.status(500).json({ message: 'Error updating bank details', error: error.message });
   }
 };
-const path = require('path');
-const fs = require('fs');
+// const path = require('path');
+// const fs = require('fs');
 const { generateTeacherId, generateParentId } = require('../utils/idGenerator');
 const { generateTeacherPassword, generateParentPassword, hashPassword } = require('../utils/passwordGenerator');
 
@@ -950,30 +953,26 @@ exports.createSchool = async (req, res) => {
       isActive: true
     };
 
-    // Handle logo upload with Sharp compression BEFORE creating school
+    // Handle logo upload with Cloudinary BEFORE creating school
     console.log('🔍 Checking for logo file upload...');
     console.log('req.file:', req.file ? `Yes - ${req.file.originalname}` : 'No file uploaded');
     
     if (req.file) {
+      let tempCompressedPath = null;
+      
       try {
         console.log(`📸 Original logo: ${req.file.originalname}, Size: ${(req.file.size / 1024).toFixed(2)}KB`);
         
-        // Create uploads directory structure: uploads/logos/
-        const logosDir = path.join(__dirname, '..', 'uploads', 'logos');
-        console.log('📁 Logos directory path:', logosDir);
-        
-        if (!fs.existsSync(logosDir)) {
-          fs.mkdirSync(logosDir, { recursive: true });
-          console.log('✅ Created logos directory');
-        } else {
-          console.log('✅ Logos directory already exists');
+        // Create temp directory for compression
+        const tempDir = path.join(__dirname, '..', 'uploads', 'temp');
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
         }
 
         // Generate unique filename with .jpg extension (Sharp will convert to JPEG)
         const timestamp = Date.now();
         const filename = `${schoolData.code}_${timestamp}.jpg`;
-        const destPath = path.join(logosDir, filename);
-        console.log('📝 Destination path:', destPath);
+        tempCompressedPath = path.join(tempDir, filename);
 
         // Compress logo using Sharp to ~30KB
         console.log('🔄 Compressing logo with Sharp...');
@@ -981,13 +980,13 @@ exports.createSchool = async (req, res) => {
         await sharpInstance
           .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
           .jpeg({ quality: 60 })
-          .toFile(destPath);
+          .toFile(tempCompressedPath);
         
         // Release Sharp resources
         sharpInstance.destroy();
         
         // Check file size and re-compress if needed
-        let stats = fs.statSync(destPath);
+        let stats = fs.statSync(tempCompressedPath);
         let quality = 60;
         
         while (stats.size > 30 * 1024 && quality > 20) {
@@ -997,51 +996,32 @@ exports.createSchool = async (req, res) => {
           await recompressInstance
             .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
             .jpeg({ quality })
-            .toFile(destPath);
+            .toFile(tempCompressedPath);
           recompressInstance.destroy();
-          stats = fs.statSync(destPath);
+          stats = fs.statSync(tempCompressedPath);
         }
         
         console.log(`✅ Compressed logo: ${(stats.size / 1024).toFixed(2)}KB (quality: ${quality})`);
         
-        const logoPath = `/uploads/logos/${filename}`;
-        schoolData.logoUrl = logoPath;
-        console.log('✅ Logo URL set in schoolData:', logoPath);
+        // Upload to Cloudinary
+        const cloudinaryFolder = `logos`;
+        const publicId = `${schoolData.code}_${timestamp}`;
+        const uploadResult = await uploadToCloudinary(tempCompressedPath, cloudinaryFolder, publicId);
         
-        // Delete temp file after ensuring Sharp has released it
-        const tempFilePath = req.file.path;
-        if (tempFilePath && fs.existsSync(tempFilePath)) {
-          try {
-            // Small delay to ensure file handle is released
-            await new Promise(resolve => setTimeout(resolve, 100));
-            fs.unlinkSync(tempFilePath);
-            console.log(`🗑️ Deleted temp file: ${path.basename(tempFilePath)}`);
-          } catch (err) {
-            console.warn(`⚠️ Could not delete temp file: ${err.message}`);
-            // Schedule deletion for later if immediate deletion fails
-            setTimeout(() => {
-              try {
-                if (fs.existsSync(tempFilePath)) {
-                  fs.unlinkSync(tempFilePath);
-                  console.log(`🗑️ Delayed deletion successful: ${path.basename(tempFilePath)}`);
-                }
-              } catch (retryErr) {
-                console.error(`❌ Failed to delete temp file even after delay: ${retryErr.message}`);
-              }
-            }, 2000);
-          }
-        }
+        schoolData.logoUrl = uploadResult.secure_url;
+        console.log('✅ Logo uploaded to Cloudinary:', uploadResult.secure_url);
+        
+        // Delete temp files
+        deleteLocalFile(req.file.path);
+        deleteLocalFile(tempCompressedPath);
+        
       } catch (error) {
         console.error('❌ Error handling logo upload:', error);
         console.error('Error stack:', error.stack);
-        // Clean up temp file immediately on error
-        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-          try {
-            fs.unlinkSync(req.file.path);
-            console.log(`🗑️ Cleaned up temp file after error`);
-          } catch (err) {
-            console.warn(`⚠️ Could not clean up temp file: ${err.message}`);
-          }
+        // Clean up temp files on error
+        deleteLocalFile(req.file.path);
+        if (tempCompressedPath) {
+          deleteLocalFile(tempCompressedPath);
         }
       }
     } else {
@@ -1720,7 +1700,30 @@ exports.getSchoolInfoFromDatabase = async (req, res) => {
     const schoolInfoCollection = schoolConnection.collection('school_info');
     
     // Fetch school info document
-    const schoolInfo = await schoolInfoCollection.findOne({});
+    let schoolInfo = await schoolInfoCollection.findOne({});
+    
+    // If school_info doesn't exist or doesn't have bank details, try to sync from main database
+    if (!schoolInfo || !schoolInfo.bankDetails) {
+      console.log(`[getSchoolInfoFromDatabase] School info missing or no bank details, syncing from main database...`);
+      
+      // Get school from main database
+      const School = require('../models/School');
+      const mainSchool = await School.findOne({ code: schoolCode });
+      
+      if (mainSchool) {
+        console.log(`[getSchoolInfoFromDatabase] Found school in main DB, syncing...`);
+        console.log(`[getSchoolInfoFromDatabase] Main school bank details:`, JSON.stringify(mainSchool.bankDetails, null, 2));
+        
+        // Sync to dedicated database
+        await syncSchoolInfoToDatabase(mainSchool);
+        
+        // Fetch again after sync
+        schoolInfo = await schoolInfoCollection.findOne({});
+        console.log(`[getSchoolInfoFromDatabase] After sync, bank details:`, JSON.stringify(schoolInfo?.bankDetails, null, 2));
+      } else {
+        console.warn(`[getSchoolInfoFromDatabase] School not found in main database: ${schoolCode}`);
+      }
+    }
     
     if (!schoolInfo) {
       return res.status(404).json({ 
@@ -1730,6 +1733,7 @@ exports.getSchoolInfoFromDatabase = async (req, res) => {
     }
 
     console.log(`[getSchoolInfoFromDatabase] Found school: ${schoolInfo.name} (${schoolInfo.code})`);
+    console.log(`[getSchoolInfoFromDatabase] Bank details present:`, !!schoolInfo.bankDetails);
     
     // Return school info from school's database
     res.json({
@@ -1821,96 +1825,85 @@ exports.updateSchool = async (req, res) => {
 
     // Handle logo upload with Sharp compression if file is present
     if (req.file) {
+      let tempCompressedPath = null;
+      
       try {
-        console.log(`📸 Updating logo: ${req.file.originalname}, Size: ${(req.file.size / 1024).toFixed(2)}KB`);
+        console.log(`Updating logo: ${req.file.originalname}, Size: ${(req.file.size / 1024).toFixed(2)}KB`);
         
         // Get existing school to get code for filename
         const existingSchool = await School.findById(schoolId);
-        if (!existingSchool) {
-          return res.status(404).json({ message: 'School not found' });
-        }
-        
-        // Create uploads directory structure: uploads/logos/
-        const logosDir = path.join(__dirname, '..', 'uploads', 'logos');
-        console.log('📁 Logos directory path:', logosDir);
-        
-        if (!fs.existsSync(logosDir)) {
-          fs.mkdirSync(logosDir, { recursive: true });
-          console.log('✅ Created logos directory');
-        }
 
-        // Delete old logo file if it exists
-        if (existingSchool.logoUrl) {
-          const oldLogoPath = path.join(__dirname, '..', existingSchool.logoUrl);
-          if (fs.existsSync(oldLogoPath)) {
-            try {
-              fs.unlinkSync(oldLogoPath);
-              console.log(`🗑️ Deleted old logo: ${existingSchool.logoUrl}`);
-            } catch (err) {
-              console.warn(`⚠️ Could not delete old logo: ${err.message}`);
-            }
-          }
+        // Create temp directory for compression
+        const tempDir = path.join(__dirname, '..', 'uploads', 'temp');
+        if (!fs.existsSync(tempDir)) {
+          fs.mkdirSync(tempDir, { recursive: true });
         }
 
         // Generate unique filename with .jpg extension
         const timestamp = Date.now();
         const filename = `${existingSchool.code}_${timestamp}.jpg`;
-        const destPath = path.join(logosDir, filename);
-        console.log('📝 Destination path:', destPath);
+        tempCompressedPath = path.join(tempDir, filename);
 
         // Compress logo using Sharp to ~30KB
-        console.log('🔄 Compressing logo with Sharp...');
+        console.log('Compressing logo with Sharp...');
         const sharpInstance = sharp(req.file.path);
         await sharpInstance
           .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
           .jpeg({ quality: 60 })
-          .toFile(destPath);
+          .toFile(tempCompressedPath);
         
         // Release Sharp resources
         sharpInstance.destroy();
         
         // Check file size and re-compress if needed
-        let stats = fs.statSync(destPath);
+        let stats = fs.statSync(tempCompressedPath);
         let quality = 60;
         
         while (stats.size > 30 * 1024 && quality > 20) {
           quality -= 10;
-          console.log(`🔄 Re-compressing with quality ${quality}...`);
+          console.log(`Re-compressing with quality ${quality}...`);
           const recompressInstance = sharp(req.file.path);
           await recompressInstance
             .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
             .jpeg({ quality })
-            .toFile(destPath);
+            .toFile(tempCompressedPath);
           recompressInstance.destroy();
-          stats = fs.statSync(destPath);
+          stats = fs.statSync(tempCompressedPath);
         }
         
-        console.log(`✅ Compressed logo: ${(stats.size / 1024).toFixed(2)}KB (quality: ${quality})`);
+        console.log(`Compressed logo: ${(stats.size / 1024).toFixed(2)}KB (quality: ${quality})`);
         
-        const logoPath = `/uploads/logos/${filename}`;
-        updateData.logoUrl = logoPath;
-        console.log('✅ Logo URL set in updateData:', logoPath);
+        // Upload to Cloudinary
+        const cloudinaryFolder = `logos`;
+        const publicId = `${existingSchool.code}_${timestamp}`;
+        const uploadResult = await uploadToCloudinary(tempCompressedPath, cloudinaryFolder, publicId);
         
-        // Delete temp file
-        const tempFilePath = req.file.path;
-        if (tempFilePath && fs.existsSync(tempFilePath)) {
+        updateData.logoUrl = uploadResult.secure_url;
+        console.log('Logo uploaded to Cloudinary:', uploadResult.secure_url);
+        
+        // Extract old logo public ID for deletion
+        const oldLogoPublicId = existingSchool.logoUrl ? extractPublicId(existingSchool.logoUrl) : null;
+        
+        // Delete temp files
+        deleteLocalFile(req.file.path);
+        deleteLocalFile(tempCompressedPath);
+        
+        // Delete old logo from Cloudinary after successful upload
+        if (oldLogoPublicId) {
           try {
-            await new Promise(resolve => setTimeout(resolve, 100));
-            fs.unlinkSync(tempFilePath);
-            console.log(`🗑️ Deleted temp file: ${path.basename(tempFilePath)}`);
+            await deleteFromCloudinary(oldLogoPublicId);
+            console.log(`Deleted old logo from Cloudinary: ${oldLogoPublicId}`);
           } catch (err) {
-            console.warn(`⚠️ Could not delete temp file: ${err.message}`);
+            console.warn(`Could not delete old logo from Cloudinary: ${err.message}`);
           }
         }
+        
       } catch (error) {
-        console.error('❌ Error handling logo upload:', error);
-        // Clean up temp file on error
-        if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-          try {
-            fs.unlinkSync(req.file.path);
-          } catch (err) {
-            console.warn(`⚠️ Could not clean up temp file: ${err.message}`);
-          }
+        console.error('Error handling logo upload:', error);
+        // Clean up temp files on error
+        deleteLocalFile(req.file.path);
+        if (tempCompressedPath) {
+          deleteLocalFile(tempCompressedPath);
         }
       }
     }

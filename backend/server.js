@@ -79,6 +79,7 @@ const academicYearRoutes = require('./routes/academicYear');
 const migrationRoutes = require('./routes/migration');
 const leaveRoutes = require('./routes/leaveRoutes');
 const idCardTemplateRoutes = require('./routes/idCardTemplates');
+const chalanRoutes = require('./routes/chalanRoutes');
 
 // Serve uploads statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -187,6 +188,7 @@ app.use('/api/fees', feesRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/leave-requests', leaveRoutes);
 app.use('/api/id-card-templates', idCardTemplateRoutes);
+app.use('/api/chalans', chalanRoutes);
 
 
 // --- Define Export/Import Routes Directly ---
