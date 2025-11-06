@@ -33,6 +33,7 @@ const Results: React.FC = () => {
     hasClasses
   } = useSchoolClasses();
 
+  const [academicYear, setAcademicYear] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
   const [availableSections, setAvailableSections] = useState<any[]>([]);
@@ -993,6 +994,23 @@ const Results: React.FC = () => {
       {/* Filters */}
       <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
         <div className="flex flex-wrap gap-4">
+          {/* Academic Year Selection */}
+          <div className="flex flex-col">
+            <label htmlFor="academic-year-select" className="text-sm font-medium text-gray-700">Academic Year</label>
+            <select
+              id="academic-year-select"
+              value={academicYear}
+              onChange={(e) => setAcademicYear(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
+            >
+              <option value="">Select Year</option>
+              <option value="2024-2025">2024-2025</option>
+              <option value="2025-2026">2025-2026</option>
+              <option value="2026-2027">2026-2027</option>
+              <option value="2027-2028">2027-2028</option>
+            </select>
+          </div>
+
           {/* Class Selection */}
           <div className="flex flex-col">
             <label htmlFor="class-select" className="text-sm font-medium text-gray-700">Class</label>

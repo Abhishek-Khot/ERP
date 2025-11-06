@@ -16,6 +16,7 @@ const ViewResults: React.FC = () => {
     getSectionsByClass
   } = useSchoolClasses();
 
+  const [academicYear, setAcademicYear] = useState<string>('');
   const [selectedClass, setSelectedClass] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('');
   const [selectedSubject, setSelectedSubject] = useState<string>('');
@@ -307,7 +308,22 @@ const ViewResults: React.FC = () => {
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-3">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Academic Year</label>
+            <select
+              value={academicYear}
+              onChange={(e) => setAcademicYear(e.target.value)}
+              className="w-full px-2 py-1.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">All Years</option>
+              <option value="2024-2025">2024-2025</option>
+              <option value="2025-2026">2025-2026</option>
+              <option value="2026-2027">2026-2027</option>
+              <option value="2027-2028">2027-2028</option>
+            </select>
+          </div>
+
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">Class</label>
             <select

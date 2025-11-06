@@ -46,6 +46,7 @@ const ReportsPage: React.FC = () => {
   const { user } = useAuth();
   
   // Filter state
+  const [academicYear, setAcademicYear] = useState('');
   const [selectedClass, setSelectedClass] = useState('ALL');
   const [selectedSection, setSelectedSection] = useState('ALL');
   const [dateFrom, setDateFrom] = useState('');
@@ -618,7 +619,25 @@ const ReportsPage: React.FC = () => {
         <div className="p-6">
           {/* Global Filters */}
           <div className="mb-6">
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {/* Academic Year Filter */}
+              <div className="relative">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Academic Year
+                </label>
+                <select
+                  value={academicYear}
+                  onChange={(e) => setAcademicYear(e.target.value)}
+                  className="w-full bg-white border border-gray-300 rounded-md shadow-sm pl-3 pr-10 py-2 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">All Years</option>
+                  <option value="2024-2025">2024-2025</option>
+                  <option value="2025-2026">2025-2026</option>
+                  <option value="2026-2027">2026-2027</option>
+                  <option value="2027-2028">2027-2028</option>
+                </select>
+              </div>
+
               <ClassSectionSelect
                 schoolId={user?.schoolId}
                 valueClass={selectedClass}

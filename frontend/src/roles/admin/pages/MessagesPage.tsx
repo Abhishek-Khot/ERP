@@ -60,6 +60,7 @@ const MessagesPage: React.FC = () => {
   const [recipientCount, setRecipientCount] = useState<number>(0);
 
   // Sent Messages List filter state
+  const [academicYear, setAcademicYear] = useState('');
   const [messagesFilterClass, setMessagesFilterClass] = useState('ALL'); // 'ALL' for filtering
   const [messagesFilterSection, setMessagesFilterSection] = useState('ALL'); // 'ALL' for filtering
   const [messages, setMessages] = useState<Message[]>([]);
@@ -469,6 +470,25 @@ const MessagesPage: React.FC = () => {
 
     return (
       <div className="flex space-x-4 mb-4">
+        {/* Academic Year Filter */}
+        <div className="w-1/3">
+          <label htmlFor="filter-academic-year" className="block text-xs font-medium text-gray-500 mb-1">
+            Academic Year
+          </label>
+          <select
+            id="filter-academic-year"
+            value={academicYear}
+            onChange={(e) => setAcademicYear(e.target.value)}
+            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          >
+            <option value="">All Years</option>
+            <option value="2024-2025">2024-2025</option>
+            <option value="2025-2026">2025-2026</option>
+            <option value="2026-2027">2026-2027</option>
+            <option value="2027-2028">2027-2028</option>
+          </select>
+        </div>
+
         {/* Class Filter */}
         <div className="w-1/3">
           <label htmlFor="filter-class" className="block text-xs font-medium text-gray-500 mb-1">

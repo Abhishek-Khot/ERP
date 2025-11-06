@@ -253,13 +253,16 @@ const FeeStructureTab: React.FC = () => {
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Academic Year
               </label>
-              <input
-                type="text"
+              <select
                 value={academicYear}
-                readOnly
-                disabled
+                onChange={(e) => setAcademicYear(e.target.value)}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              />
+              >
+                <option value="2024-25">2024-25</option>
+                <option value="2025-26">2025-26</option>
+                <option value="2026-27">2026-27</option>
+                <option value="2027-28">2027-28</option>
+              </select>
             </div>
           </div>
 

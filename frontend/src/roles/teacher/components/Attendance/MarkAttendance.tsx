@@ -9,6 +9,7 @@ const MarkAttendance: React.FC = () => {
   const { user, token } = useAuth();
   const { classesData, loading: classesLoading, getSectionsByClass } = useSchoolClasses();
   
+  const [academicYear, setAcademicYear] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
@@ -335,7 +336,22 @@ const MarkAttendance: React.FC = () => {
 
       {/* Selection Controls */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Academic Year</label>
+            <select
+              value={academicYear}
+              onChange={(e) => setAcademicYear(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="">Select Year</option>
+              <option value="2024-2025">2024-2025</option>
+              <option value="2025-2026">2025-2026</option>
+              <option value="2026-2027">2026-2027</option>
+              <option value="2027-2028">2027-2028</option>
+            </select>
+          </div>
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
             <input

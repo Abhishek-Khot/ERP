@@ -100,6 +100,7 @@ const AcademicDetails: React.FC = () => {
   const [newSubjectName, setNewSubjectName] = useState('');
 
   // State management for Hall Ticket Generation
+  const [academicYear, setAcademicYear] = useState<string>('');
   const [hallTicketClass, setHallTicketClass] = useState<string>('');
   const [hallTicketSection, setHallTicketSection] = useState<string>('');
   const [selectedTest, setSelectedTest] = useState<string>('');
@@ -115,6 +116,7 @@ const AcademicDetails: React.FC = () => {
   const [newInstruction, setNewInstruction] = useState<string>('');
 
   // ID Card Generation State
+  const [idCardAcademicYear, setIdCardAcademicYear] = useState('');
   const [idCardClass, setIdCardClass] = useState('');
   const [idCardSection, setIdCardSection] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('');
@@ -1926,7 +1928,25 @@ const AcademicDetails: React.FC = () => {
               <div className="bg-white rounded-lg shadow-md p-6">
                 <h2 className="text-lg font-semibold text-gray-800 mb-4">Generate Hall Tickets</h2>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                  {/* Academic Year Selection */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Academic Year <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={academicYear}
+                      onChange={(e) => setAcademicYear(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                      <option value="">Select year...</option>
+                      <option value="2024-2025">2024-2025</option>
+                      <option value="2025-2026">2025-2026</option>
+                      <option value="2026-2027">2026-2027</option>
+                      <option value="2027-2028">2027-2028</option>
+                    </select>
+                  </div>
+
                   {/* Class Selection */}
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -2230,7 +2250,25 @@ const AcademicDetails: React.FC = () => {
             <div className="bg-white rounded-lg shadow-md p-6 mb-6">
               <h2 className="text-lg font-semibold text-gray-800 mb-4">Generate School ID Cards</h2>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                {/* Academic Year Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Academic Year <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={idCardAcademicYear}
+                    onChange={(e) => setIdCardAcademicYear(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="">Select year...</option>
+                    <option value="2024-2025">2024-2025</option>
+                    <option value="2025-2026">2025-2026</option>
+                    <option value="2026-2027">2026-2027</option>
+                    <option value="2027-2028">2027-2028</option>
+                  </select>
+                </div>
+
                 {/* Class Selection */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">

@@ -26,6 +26,7 @@ const LeaveManagement: React.FC = () => {
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<LeaveRequest[]>([]);
   const [loading, setLoading] = useState(true);
+  const [academicYear, setAcademicYear] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<LeaveRequest | null>(null);
@@ -346,6 +347,22 @@ const LeaveManagement: React.FC = () => {
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6">
         <div className="flex flex-col md:flex-row gap-4">
+          {/* Academic Year Filter */}
+          <div className="flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-gray-400" />
+            <select
+              value={academicYear}
+              onChange={(e) => setAcademicYear(e.target.value)}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent min-w-[150px]"
+            >
+              <option value="">All Years</option>
+              <option value="2024-2025">2024-2025</option>
+              <option value="2025-2026">2025-2026</option>
+              <option value="2026-2027">2026-2027</option>
+              <option value="2027-2028">2027-2028</option>
+            </select>
+          </div>
+
           {/* Search */}
           <div className="flex-1">
             <div className="relative">

@@ -25,6 +25,7 @@ const ViewAssignments: React.FC = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [filteredAssignments, setFilteredAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(false);
+  const [academicYear, setAcademicYear] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedClass, setSelectedClass] = useState('');
   const [selectedSection, setSelectedSection] = useState('');
@@ -264,7 +265,19 @@ const ViewAssignments: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Filters */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
+        <select
+          value={academicYear}
+          onChange={(e) => setAcademicYear(e.target.value)}
+          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="">All Years</option>
+          <option value="2024-2025">2024-2025</option>
+          <option value="2025-2026">2025-2026</option>
+          <option value="2026-2027">2026-2027</option>
+          <option value="2027-2028">2027-2028</option>
+        </select>
+
         <div className="relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
           <input
